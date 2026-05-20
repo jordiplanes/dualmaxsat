@@ -1,0 +1,348 @@
+\documentclass[runningheads,a4paper]{llncs}
+\usepackage[shortend,ruled]{algorithm2e}
+\usepackage{amsmath,amsfonts}
+
+\title{Column Generation in Boolean Optimization}
+\author{Jordi Planes}
+\institute{Universitat de Lleida}
+
+\bibliographystyle{splncs03}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Recently several MaxSat algorithms based on SAT reduction have
+appeared in the literature. Our paper attemps to present a general
+methodology , gathering all the algorithms in a common framework.
+%A common framework to demonstrate the soundness of the MaxSat unsat-based solvers.
+%We show that several recent algorithms applied to the MaxSat solving are the Benders decomposition~\cite{benders62} when applying the inference dual~\cite{hooker99}. We discuss the several algorithms and how are related to the Benders decomposition. This leads to show several features (incrementality) of the algorithms and other possible algorithms.
+
+%El fet que el dual de MaxSat sigui el dual de Hooker~\cite{hooker99} fa que siguin més
+%fàcils d'explicar els algorismes SAT-oracle based. Son l'aplicacio del
+%metode de Benders a la logica propositional~\cite{benders62} i
+%canviant el metode Simplex pel metode DP~\cite{DP60}.
+%Aixo ens permet entendre millor els metodes, verificar-ne la
+%correctesa i millorar-los i trobar-ne de nous.
+
+%Tambe demostrarem la no incrementalitat dels algorismes, tant SAT-UNSAT com UNSAT-SAT.
+\end{abstract}
+
+% Esquema bàsic (4 pages at most):
+% \begin{itemize}
+% \item dualitat s -- r
+% \item Identificar inference dual (i/o altres)
+% \item Metodes de generacio de columnes amb Const(k) i relacio unsat-sat
+% \item Metodes sat-unsat
+% \end{itemize}
+
+\section{Introduction}\label{sec:intro}
+
+TO BE DONE: Max-2-SAT dual = graph duality. MaxSat dual is MinOnes?
+One can get it applying resolution.
+Maxflow, Mincut theorem?
+
+In operations research, there are a well known set of column
+generation methods (e.g., Dantzig-Wolfe~\cite{dantzig-wolfe},
+Benders cuts~\cite{benders62}) which are based on
+the relaxation of an optimization problem into an easier problem
+(usually a linear problem solved by the Simplex method) and
+iteratively solve the initial problem.
+
+Recently, a set of algorithms have been created to solve the MaxSat
+problem. Such algorithms are original in the sense that they
+iteratively reduce the MaxSat problem into Sat.
+
+The complexity of MaxSat is $P^{NP[log n]}$ , meaning that it can be
+solved with a logarithmic number of calls to a SAT oracle~\cite{papadimitriou94}.
+
+In this paper we extend the idea of inference dual~\cite{hooker99} to
+the MaxSat problem.
+
+
+\section{Preliminaries}
+
+Given a CNF instance $\phi$, the MaxSat problem is the problem of finding an
+assignment which maximizes the number of satisfied clauses in $\phi$.
+
+The MaxSat problem can be written as
+\begin{eqnarray}
+\min & \sum s_i \\
+\text{subject to} & s_i + \sum a_{ij} x_i \ge 1 \\
+& a_{ij}, x_i, s_i \in \{ 0, 1 \}
+\end{eqnarray}
+where $x_i$ is a Boolean variable in the CNF and $a_{ij}$ is the
+selector variable for variable $x_i$ in clause $j$ and $s_j$ is the
+selector of clause $j$.
+Minimize the number of selectors in order to make the formula satisfiable.
+
+The dual of the problem above is:
+\begin{eqnarray}
+\min &\sum \sigma_i \\
+\text{subject to} & \sigma_i + \prod \alpha_{ij} c_i = 1 \\
+& \alpha_{ij}, \sigma_i, c_i \in \{ 0, 1 \}  
+\end{eqnarray}
+
+
+\begin{eqnarray}
+\min &\sum \sigma_i \\
+\text{subject to} & \sigma_i + F( \alpha_{ij} c_i ) \le 1 \\
+& \alpha_{ij}, \sigma_i, c_i \in \{ 0, 1 \}  
+\end{eqnarray}
+
+\begin{eqnarray}
+\max & \sum \sigma_i \\
+\text{subject to} & \sigma_i + F( \alpha_{ij} c_i ) \le 1 \\
+& \alpha_{ij}, \sigma, c_i, F( \alpha_{ij} c_i ) \in \{ 0, 1 \} 
+\end{eqnarray}
+
+where $\sigma_i$ is the selector of the proof $i$ and $\alpha_{ij}$ is the
+selector of clause $i$ in proof $j$.
+Minimize the number of proofs with condition $\le 1$ in order to make
+the formula satisfiable.
+$F( \phi  )$ is a function which returns 0 if the formula $\phi$ is
+satisfiable, otherwise returns 1.
+
+This problem corresponds to 
+\begin{eqnarray}
+\max & \sum s_i \\
+\text{subject to} & \prod s_i c_i = 0
+\end{eqnarray}
+The minimal removal ($s_i = 0$) of $c_i$ which makes the formula satisfiable.
+
+An optimization problem can be written 
+\begin{equation}
+\min \{ f(x) | \mathcal{C} \}
+\label{eq:opt-prob}
+\end{equation}
+where $f(x)$ is a real-valued function, $\mathcal{C}$ is a constraint set containing variables $x=(x_1, \ldots, x_n)$, and $D$ is a domain of $x$. A solution $\bar x\in D$ is feasible when it satisfies $\mathbb{C}$ and is optimal when $f(\bar x) \le f(x)$ for all feasible $x$.
+
+Given a CNF formula, the MaxSat is the problem of finding an assignment with the maximum number of satisfied clauses.
+Using the notation in~\ref{eq:opt-prob}, the MaxSat problem can be written as
+\begin{equation}
+\min_{a,x,w\in \{ 0, 1 \}} \{ \sum w_j | \sum a_{ij} x_i + w_j  \ge 1 \}
+\label{eq:maxsat}
+\end{equation}
+
+The inference dual of \ref{eq:opt-prob} is the problem of finding the greatest lower bound on $f(x)$ that can be inferred from $\mathcal{C}$ within a given proof system. The inference dual can be written
+\begin{equation}
+\max_{P\in \mathcal{P}} \{ v\ |\ \mathcal{C} \overset{P}{\vdash} (f(x) \ge v) \}
+\label{eq:dual}
+\end{equation}
+where $\mathcal{C} \overset{P}{\vdash} (f(x) \ge v)$ indicates that proof $P$ deduces $f(x) \ge v$ from $\mathcal{C}$. The domain of variable $P$ is a family $\mathcal{P}$ of proofs. A pair $(\bar v, \bar P)$ is a feasible solution of \ref{eq:dual} if $P\in\mathcal{P}$ and $\mathcal{C} \overset{\bar P}{\vdash} (f(x) \ge \bar v)$, and it is optimal if $\bar v \ge v$ for all feasible $(v,P)$.
+
+Equivalently, it can be defined as:
+\begin{equation}
+\min_{P\in \mathcal{P}} \{ v\ |\ \mathcal{C} \overset{P}{\vdash} (f(x) \le v) \}
+\label{eq:dual2}
+\end{equation}
+
+%%%
+
+\begin{lemma}
+Given a MaxSat primal assignment, there is a unique MaxSat dual assignment.
+\end{lemma}
+\begin{proof}
+Hitting set, unuseful variables, variables always in MUSes, \dots \cite{KLM09}
+\end{proof}
+
+%%%
+
+\subsection{Models for Column Generation}
+
+Barnhart et al.~\cite{bjnsv98} considere a general problem $P$ of the
+form:
+
+\begin{displaymath}
+\begin{array}{rl}
+\max & c(x) \\
+& Ax \le b, \\
+& x \in S,\\
+& x \quad integer
+\end{array}
+\end{displaymath}
+
+The function $c(x)$ is needed to be easy to solve with $Ax \le b$
+removed, and $S^* \subseteq S $.
+Its column generation form is:
+
+\begin{displaymath}
+\begin{array}{rl}
+\max & \sum c_k \lambda_k \\
+& \sum a_k \lambda_k \le b \\
+& \sum \lambda_k = 1 \\
+& \lambda_k \in \{ 0, 1 \} \quad k=1,\ldots,p
+\end{array}
+\end{displaymath}
+
+\section{Related work}
+
+Column generation in Integer Programming~\cite{bjnsv98,vw96}
+
+Column generation in MaxSat~\cite{hjp98}
+
+Column generation in Constraint Programming~\cite{FJKKSV02}
+
+%%%
+
+\section{Column generation in MaxSat}
+
+Application of the Dantzig-Wolfe
+decomposition to a structured optimization problem in which
+formulations with an exponential number of variables are
+obtained. Generating these variables on demand by means of delayed
+column generation is identical to performing a cutting plane on the
+respective dual problem.
+
+%%%
+
+\begin{definition}[MUS]
+A MUS $\phi$ is a CNF minimally unsatisfiable.
+\end{definition}
+
+\begin{definition}[Relaxed CNF]
+A relaxed CNF $\phi^r$ is a CNF $\phi$ with an additional (relaxing)
+variable for every clause, i.e.:
+$$\phi^r = \{ c_i \vee b_i : \forall c_i \in \phi \}.$$
+\end{definition}
+
+Notice that a relaxed CNF without any constraint to the variables
+$b_i$ is satisfiable. 
+
+\begin{definition}[Constrained Relaxed CNF]
+A constrained relaxed CNF $\phi^r(k)$ is a relaxed CNF $\phi^r$ with
+an additional constraint over the relaxing variables $\sum r_i = k$
+where $k\in \mathbb{N}$.
+\end{definition}
+
+\begin{lemma}
+Let $\phi^r(k)$ be a constrained relaxed CNF, $\phi$ be a CNF,
+and $f(\phi)$ be the number of falsified
+clauses in a MaxSat solution of $\phi$. Then,
+ $$f(\phi^r(k)) = \max(  f(\phi) - k, 0 ). $$
+\end{lemma}
+
+\begin{proof}
+A MaxSat solution of $\phi^r \cup (\sum b_ i= k)$
+has $k$ different variables $b_i = 1$. Every of such
+variables correspond to a falsified clause in a MaxSat
+solution of $\phi$, since this will bring the largest number of
+satisfied clauses.
+If $k \ge f(\phi)$, all the falsified clauses are assigned with $b_i =
+1$, so  $\phi^r \cup (\sum b_ i= k)$ is satisfiable.
+\end{proof}
+
+Notice that there is no need to relax the whole formula $\phi$. Any falsified clause in a MaxSat
+solution belongs to a MUS. 
+%So, only the set of clauses belonging to a MUS need to be relaxed.
+%For any of the lemmata, notice that there is no need to relax the whole formula $\phi$ in
+%any of the lemmata to be correct. 
+The set of clauses to be relaxed can be reduced to the set of clauses
+of $k$ MUSes.
+
+Given $\phi^r_ 1 \cup (\sum b_ i= k)$, $\phi^r_1$ relaxing the whole
+formula, and $\phi^r_ 2 \cup (\sum b_ i= k)$, $\phi^r_2$ relaxing $k$
+MUSes which contain a clause with $b_i=1$, then both are MaxSat equivalent.
+
+\begin{corollary}
+Given $\phi$ a CNF, $k \in \mathbb{N}$, and $\phi^r$  a relaxed CNF with $\sum b_i = k$,
+let $k_m$ be the minimum $k$ that makes the formula satisfiable, and
+let $f(\phi)$ be the number of falsified clauses in a MaxSat
+solution of $\phi$. Then, $k_m = f(\phi)$.
+\label{lem:rcnf}
+\end{corollary}
+
+\begin{proof}
+For any $k<f(\phi)$, there exists an falsified
+clause in any MaxSat solution for $\phi^r$ with $b_i=0$, which makes $\phi^r$ unsatisfiable.
+For any $k \ge f(\phi)$, there exists at least one combination of
+falsified clauses
+in any MaxSat sotlution with $b_i=1$ which makes the formula $\phi^r$ satisfiable.
+\end{proof}
+
+Notice that, given a MUS, $k_m = 1$.
+
+\begin{lemma}[Composition of $\phi^r(k)$ is (sub)additive]
+Given $\phi$ a CNF, $\phi^r_1$ a relaxed CNF $\phi$  with $\sum b_i =
+k_1 + k_2$, and $\phi^r_2$ a relaxed CNF $\phi$  with $\sum b_i^1 =
+k_1 \cup \sum b_i^2 = k_2$.
+Then $\phi^r_1$ and $\phi^r_2$ are MaxSat equivalent.
+\end{lemma}
+
+\begin{proof}
+Let $f(\phi)$ the number of falsified clauses in a MaxSat solution of
+$\phi$.
+Assuming $k_1 + k_2 < f(\phi)$, then $f(\phi^r_1) = f(\phi) -(k_1+k_2)$
+and $f(\phi^r \cup \sum b_i^1 = k_1)= f(\phi) - k_1$.  
+Adding constraint $\sum b_i^2 = k_2$ to formula  $\phi^r \cup \sum b_i^1 = k_1$
+reduces the number of unsatisfied clauses by $k_2$, so 
+$f(\phi^r \cup \sum b_i^1 = k_1 \cup \sum b_i^2 = k_2 ) = f(\phi) -  k_1 -
+k_2$.
+\end{proof}
+
+\begin{corollary}
+Given $\phi$ a CNF, and $\phi^{r(k)}$ a relaxed CNF with $\sum b_i^1 =
+1 \cup \cdots \cup \sum b_i^k = 1$. Let $k_m$ be the minimum $k$ that makes the formula
+$\phi^{r(k)}$ satisfiable, and let $f(\phi)$ be the number of falsified clauses in a
+MaxSat solution of $\phi$. Then, $k_m = f(\phi)$.
+\label{lem:rcnf2}
+\end{corollary}
+
+\begin{proof}
+%At least, there are $f(\phi)$ MUSes in $\phi$. 
+For any $k<f(\phi)$, there exists a set of falsified clauses in a MaxSat solution of $\phi^r$ with
+$b_i=0$, which makes $\phi^r$ unsatisfiable.
+For any $k \ge f(\phi)$, there exists at least one combination of
+falsified clauses in a MaxSat solution of $\phi$
+with $b_i=1$, which makes the formula $\phi^{r(k)}$ satisfiable.
+\end{proof}
+
+\section{Integer Programming}
+
+$$
+\begin{array}{ll}
+\max \sum x_{ij}\\
+& \sum a_{ij} + x_{ij} \le 1 \\
+& \sum x_{ij} = 1 \\
+a_{ij}, x_{ij} \in \{0,1\} 
+\end{array}
+$$
+
+Relaxation
+$$
+\begin{array}{ll}
+& \sum a_{ij} + x_{ij} \le 1 \\
+& \sum x_{ij} = 1 \\
+a_{ij}, x_{ij} \in \{0,1\} 
+\end{array}
+$$
+
+Column generation
+$$
+\begin{array}{ll}
+& \sum a_{ij} + x_{ij} + y_{ij}\le 1 \\
+& \sum x_{ij} = 1 \\
+& \sum y_{ij} = 1 \\
+a_{ij}, x_{ij} \in \{0,1\} 
+\end{array}
+$$
+
+\section{Unsatisfiablity based MaxSat algorithms}
+
+Faltaria fer:
+\begin{itemize}
+\item IMPORTANT: Explicar algorismes MSU1, MSU3, \textbf{MSU4} i
+  relacionar-los
+\item IMPORTANT: Explicar algorismes anteriors a weighted i
+  relacionar-los
+\item Aplicar resolution (row generation) després de column generation
+\item Identificar els casos on es pot aplicar local search unsat~\cite{AS07} en
+  comptes de systematic: TOTS els casos.
+\item Com es pot millorar Sat-Unsat: identificant clausules no necessaries (molt dificil)
+\item Com extendre-ho a weighted, quines tecniques es podrien utilitzar
+\end{itemize}
+
+\bibliography{jordi,others}
+
+\end{document}
