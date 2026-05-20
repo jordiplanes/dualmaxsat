@@ -108,6 +108,62 @@ removal makes the formula satisfiable, i.e., $\mathcal{H} \cup (\mathcal{S}
 
 There is a well-known duality: every minimal core hits every minimal correction set, and vice versa~\citep{liffiton2008algorithms}.
 
+\subsection{Core-Guided and IHS Algorithms}
+
+The two algorithm families differ in \emph{where} they accumulate information about the instance.
+
+\paragraph{Core-guided algorithms.}
+Core-guided solvers maintain the formula itself as an implicit representation of the lower bound. At each iteration a SAT oracle is called; if it returns unsatisfiable, a core~$\kappa$ is extracted and the formula is syntactically \emph{transformed} so that at least one soft clause in~$\kappa$ must be relaxed, raising the lower bound by the minimum weight in the core. Algorithm~\ref{alg:cg} gives a generic presentation that captures WPM1~\citep{ansotegui2009solving}, PMRES~\citep{narodytska2014maximum}, and OLL~\citep{morgado2014core} as instantiations of the \textsc{Relax} step.
+
+\begin{algorithm}[t]
+\caption{Generic Core-Guided MaxSAT}
+\label{alg:cg}
+\begin{algorithmic}[1]
+\Require weighted partial MaxSAT instance $\langle \mathcal{H}, \mathcal{S}, w \rangle$
+\Ensure optimal cost $\mathit{OPT}$ and a satisfying assignment
+\State $\mathit{lb} \leftarrow 0$;\quad $\mathcal{S}' \leftarrow \mathcal{S}$;\quad $w' \leftarrow w$
+\Loop
+    \State $\mathit{result} \leftarrow \textsc{SAT}\!\left(\mathcal{H} \cup \mathcal{S}'\right)$
+    \If{$\mathit{result} = \mathbf{SAT}$}
+        \State \Return $(\sigma,\; \mathit{lb})$ \Comment{$\sigma$ is the satisfying assignment}
+    \EndIf
+    \State $\kappa \leftarrow \textsc{UnsatCore}\!\left(\mathcal{H},\mathcal{S}'\right)$ \Comment{$\kappa \subseteq \mathcal{S}'$, $\mathcal{H} \cup \kappa$ unsat}
+    \State $\delta \leftarrow \min\{w'(s) : s \in \kappa\}$
+    \State $\mathit{lb} \leftarrow \mathit{lb} + \delta$
+    \State $(\mathcal{S}', w') \leftarrow \textsc{Relax}(\mathcal{S}', w', \kappa, \delta)$
+    \Comment{add relaxation vars; reduce weights by $\delta$}
+\EndLoop
+\end{algorithmic}
+\end{algorithm}
+
+The \textsc{Relax} step introduces a fresh relaxation variable~$r_s$ for each $s \in \kappa$, weakening each clause from~$s$ to $s \vee r_s$, and adds a \emph{cardinality constraint} $\sum_{s \in \kappa} r_s \geq 1$ (or a soft version thereof weighted~$\delta$). Weights exceeding $\delta$ give rise to residual copies of the clause with weight $w'(s) - \delta$. Different choices of cardinality encoding yield the different named algorithms; the common invariant is that $\mathit{lb}$ is a valid lower bound on the optimal cost after every iteration.
+
+\paragraph{Implicit Hitting Set algorithms.}
+IHS solvers~\citep{davies2011solving,davies2013exploiting} separate the two responsibilities cleanly: an IP solver maintains an explicit \emph{master problem} that optimizes over the cores found so far, while the SAT oracle is used only to validate or refute the current candidate solution. Algorithm~\ref{alg:ihs} describes the MaxHS solver.
+
+\begin{algorithm}[t]
+\caption{Implicit Hitting Set MaxSAT (MaxHS)}
+\label{alg:ihs}
+\begin{algorithmic}[1]
+\Require weighted partial MaxSAT instance $\langle \mathcal{H}, \mathcal{S}, w \rangle$
+\Ensure optimal cost $\mathit{OPT}$ and a satisfying assignment
+\State $\mathcal{K} \leftarrow \emptyset$ \Comment{set of discovered cores}
+\Loop
+    \State $H^* \leftarrow \textsc{SolveIP}\!\left(\min \textstyle\sum_{i} w(s_i)\,y_i \;:\; \sum_{s_i \in \kappa} y_i \geq 1\;\forall \kappa \in \mathcal{K},\; y \in \{0,1\}^{|\mathcal{S}|}\right)$
+    \State $\mathit{result} \leftarrow \textsc{SAT}\!\left(\mathcal{H} \cup \left(\mathcal{S} \setminus H^*\right)\right)$
+    \If{$\mathit{result} = \mathbf{SAT}$}
+        \State \Return $\!\left(\sigma,\; \textstyle\sum_{s \in H^*} w(s)\right)$
+        \Comment{$H^*$ is a minimum-cost correction set}
+    \EndIf
+    \State $\kappa \leftarrow \textsc{UnsatCore}\!\left(\mathcal{H},\, \mathcal{S} \setminus H^*\right)$
+    \Comment{$\kappa$ is not hit by $H^*$}
+    \State $\mathcal{K} \leftarrow \mathcal{K} \cup \{\kappa\}$
+\EndLoop
+\end{algorithmic}
+\end{algorithm}
+
+At termination of Algorithm~\ref{alg:ihs}, the optimal cost equals $\sum_{s \in H^*} w(s)$ because (i)~$H^*$ is a minimum hitting set of all known cores, giving a lower bound, and (ii)~the SAT oracle confirms that $\mathcal{S} \setminus H^*$ is satisfiable together with $\mathcal{H}$, so $H^*$ is an achievable correction set and hence an upper bound. The lower and upper bounds coincide, certifying optimality.
+
 \subsection{The LP Relaxation of MaxSAT}
 
 Introduce a binary variable $y_i \in \{0,1\}$ for each soft clause $s_i$,
@@ -126,31 +182,98 @@ relaxation replaces~\eqref{eq:maxsat-int} with $0 \leq y_i \leq 1$.
 \subsection{Benders Decomposition}
 
 Classical Benders decomposition~\citep{benders1962partitioning} partitions
-variables into complicating variables~$x$ and easy variables~$y$. The master
-problem optimizes over~$x$; for each fixed~$\bar{x}$, a subproblem over~$y$
-either certifies feasibility or returns a \emph{Benders cut} derived from the
-subproblem's dual. Cuts are accumulated in the master.
+the variables of a mixed-integer program into \emph{complicating} variables~$x$
+and \emph{easy} variables~$y$. Consider the problem
+\[
+  \min_{x \in X}\; c^{\top}x + \min_{y \geq 0}\{f^{\top}y : By \geq b - Ax\},
+\]
+where $X$ is an integer feasible set. The master problem optimizes over~$x$;
+for each fixed $\bar{x}$, the subproblem over~$y$ either yields an optimal dual
+solution~$\pi$ (giving an \emph{optimality cut} $\pi^{\top}(b - Ax) \leq z$) or
+certifies infeasibility via an extreme ray~$r$ (giving a \emph{feasibility cut}
+$r^{\top}(b - Ax) \leq 0$).
 
 \emph{Logic-Based Benders Decomposition} (LBBD)~\citep{hooker2003logic}
-generalizes this by allowing the subproblem to be any optimization or
+generalizes this by allowing the subproblem to be \emph{any} optimization or
 feasibility problem. Cuts are derived via an \emph{inference dual}: any proof
-of infeasibility or suboptimality of the subproblem yields a valid cut for the
-master. The cut need not come from LP duality; it can come from any sound
-deduction system.
+of infeasibility or suboptimality yields a valid cut for the master, without
+requiring LP duality. Algorithm~\ref{alg:benders} gives the LBBD template.
+
+\begin{algorithm}[t]
+\caption{Logic-Based Benders Decomposition (LBBD)}
+\label{alg:benders}
+\begin{algorithmic}[1]
+\Require problem $\min\{c^{\top}x + v(x) : x \in X\}$ where $v(x)$ is the value of a subproblem
+\Ensure optimal solution $(x^*, y^*)$ and cost $\mathit{OPT}$
+\State $\mathit{UB} \leftarrow +\infty$;\quad $\mathcal{C} \leftarrow \emptyset$ \Comment{$\mathcal{C}$: accumulated Benders cuts}
+\Loop
+    \State $\bar{x} \leftarrow \arg\min\{c^{\top}x + z : x \in X,\; (x,z) \text{ satisfies all cuts in } \mathcal{C}\}$
+    \Comment{solve master}
+    \State $(z_\mathrm{MP}, \bar{x}) \leftarrow$ master objective and solution
+    \If{$z_\mathrm{MP} \geq \mathit{UB}$} \textbf{break} \EndIf \Comment{lower bound meets upper bound}
+    \State $\mathit{result} \leftarrow \textsc{SolveSubproblem}(\bar{x})$
+    \If{$\mathit{result} = \mathbf{Feasible}$ \textbf{and} $c^{\top}\bar{x} + v(\bar{x}) < \mathit{UB}$}
+        \State $\mathit{UB} \leftarrow c^{\top}\bar{x} + v(\bar{x})$;\quad $(x^*, y^*) \leftarrow (\bar{x},\, \bar{y})$
+        \Comment{new incumbent}
+    \EndIf
+    \State $\phi \leftarrow \textsc{InferenceDual}(\bar{x}, \mathit{result})$
+    \Comment{derive cut from subproblem proof}
+    \State $\mathcal{C} \leftarrow \mathcal{C} \cup \{\phi\}$
+\EndLoop
+\State \Return $(x^*, y^*, \mathit{UB})$
+\end{algorithmic}
+\end{algorithm}
+
+The key degree of freedom in LBBD is \textsc{InferenceDual}: when the subproblem
+is an LP, it returns the classical Benders cut from dual multipliers; when the
+subproblem is a SAT call, it returns a combinatorial cut (an unsatisfiable core).
 
 \subsection{Dantzig--Wolfe Decomposition}
 
 Dantzig--Wolfe decomposition~\citep{dantzigwolfe1960} addresses problems with
-complicating \emph{constraints}. The feasible region of a subproblem is
-represented via its extreme points. A restricted master problem uses a subset
-of these extreme points (columns); a \emph{pricing subproblem} identifies
-whether any extreme point with negative reduced cost exists. If so, the
-corresponding column is added to the master. The procedure terminates when no
-such column exists.
+complicating \emph{constraints}. Consider an LP whose feasible region
+decomposes as $\{x : Ax = b,\; x \in \mathcal{P}\}$ where
+$\mathcal{P} = \{x : Dx \leq d,\; x \geq 0\}$ has a tractable structure.
+The key idea is to represent $\mathcal{P}$ via its extreme points
+$\{p^1, \ldots, p^K\}$: any $x \in \mathcal{P}$ can be written as a convex
+combination $x = \sum_k \lambda_k p^k$.
+
+Substituting this into the complicating constraints gives the \emph{master LP}
+over the convex multipliers~$\lambda$, which has one variable per extreme
+point—exponentially many. A \emph{restricted master} uses only a working
+subset of columns; a \emph{pricing subproblem} identifies whether any column
+with \emph{negative reduced cost} exists, and if so, generates it.
+Algorithm~\ref{alg:dw} gives the column generation procedure.
+
+\begin{algorithm}[t]
+\caption{Dantzig--Wolfe Decomposition (Column Generation)}
+\label{alg:dw}
+\begin{algorithmic}[1]
+\Require LP $\min\{c^{\top}x : Ax = b,\; x \in \mathcal{P}\}$ with $\mathcal{P}$ block-structured
+\Ensure optimal value $z^*$ and solution $x^*$
+\State Initialize restricted master with a feasible subset of columns $\Lambda \subseteq \{p^1,\ldots,p^K\}$
+\Loop
+    \State Solve restricted master LP; let $\pi$ be the dual variables for $Ax = b$
+    \State $(\bar{c}, p^{\mathrm{new}}) \leftarrow \textsc{PricingSubproblem}(\pi)$
+    \Comment{$\bar{c} = \min_{p \in \mathcal{P}}\,(c - A^{\top}\pi)^{\top}p$}
+    \If{$\bar{c} \geq 0$}
+        \State \Return $(z^*, x^*)$ \Comment{no improving column; current solution is optimal}
+    \EndIf
+    \State $\Lambda \leftarrow \Lambda \cup \{p^{\mathrm{new}}\}$
+    \Comment{add column with negative reduced cost to master}
+\EndLoop
+\end{algorithmic}
+\end{algorithm}
+
+The restricted master LP provides a valid \emph{dual bound} (lower bound for a
+minimization problem) at every iteration; this bound tightens monotonically as
+columns are added and converges to the LP optimum when no negative-reduced-cost
+column exists.
 
 Through LP duality, Benders and Dantzig--Wolfe are intimately related: adding a
-row (cut) to the primal master is equivalent to adding a column to the dual
-master, and vice versa.
+row (cut) to the Benders master corresponds to adding a column to the dual of
+that master, which is precisely the Dantzig--Wolfe master. The two algorithms
+are therefore dual views of the same iterative refinement process.
 
 %----------------------------------------------------------------------
 \section{Core-Guided MaxSAT as Benders Decomposition}
