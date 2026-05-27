@@ -1,0 +1,8 @@
+c Worked example from Section 5 of the report.
+c Variables: 1 = a, 2 = b. No hard clauses; four unit soft clauses, weight 1.
+c Cores: {s1=a, s2=¬a}, {s3=b, s4=¬b}. Optimum cost = 2.
+p wcnf 2 4 5
+1 1 0
+1 -1 0
+1 2 0
+1 -2 0

@@ -1,0 +1,116 @@
+https://claude.ai/chat/822998ce-d419-4a39-8705-a72fe41871b4
+claude --resume 6b0a5045-0822-4d8f-94b1-af09e8f103af
+
+Is there a relation between Dantzig-Wolfe decomposition and core-based maxsat solving?
+
+19 May
+
+Excavated structural parallels between decomposition methods and MaxSAT algorithms
+Excavated structural parallels between decomposition methods and MaxSAT algorithms
+This is a deep and genuinely interesting question that touches on the convergence between the SAT/CP community and operations research. The connection is real but requires some care to unpack.
+
+First, the More Natural Analogy
+Before getting to Dantzig-Wolfe specifically, it's worth noting that core-based MaxSAT is structurally closer to Benders decomposition:
+
+Each unsatisfiable core discovered is an infeasibility certificate, analogous to a Benders cut
+The master problem is iteratively refined by adding these certificates
+A SAT oracle plays the role of the subproblem, either certifying feasibility or returning a new core
+This mirrors exactly the Benders loop: master → subproblem → cut → master.
+
+The Dantzig-Wolfe Connection: The Implicit Hitting Set View
+The link to Dantzig-Wolfe appears when you look at MaxSAT through the hitting set dual formulation, developed notably by Davies & Bacchus in the IHS (Implicit Hitting Set) approach:
+
+Hitting Set reformulation of MaxSAT:
+
+A set of soft clauses hits a core if it contains at least one clause from it
+MaxSAT = find minimum weight set of soft clauses that hits all cores
+But the set of all cores is exponentially large, so you generate them lazily
+The algorithm becomes:
+
+Master problem: solve a hitting set LP/ILP over known cores only
+Oracle (SAT solver): check if the hitting set satisfies all soft clauses; if not, return a new core
+Add the new core as a constraint and repeat
+The structural parallel to Dantzig-Wolfe is:
+
+Dantzig-Wolfe	Implicit Hitting Set MaxSAT
+Master	Restricted LP (subset of columns)	Hitting set over known cores
+Subproblem	Pricing: find column with negative reduced cost	SAT oracle: find uncovered core
+Information passed	New column (variable)	New core (constraint)
+Termination	No negative reduced cost exists	No new core exists (solution is valid)
+Bound	LP relaxation bound tightens	Lower bound on unsat cost tightens
+The key nuance is that IHS adds constraints (cores) to the master, which looks more like cutting planes. But through LP duality, adding constraints to the primal is equivalent to adding variables to the dual — so the DW connection emerges naturally in the dual space.
+
+The Duality Bridge
+This is where it gets elegant. Consider the LP relaxation of MaxSAT:
+
+Primal (hitting set view): variables are soft clauses, constraints are cores → iteratively add cores = cutting plane / Benders style
+Dual: variables are cores, constraints are soft clauses → iteratively add cores = column generation / DW style
+So depending on which side of duality you stand on, the same core-guided procedure looks like either Benders or Dantzig-Wolfe. This is the same classical duality that links Benders and DW in linear programming.
+
+Further Connections
+Core-guided algorithms and LP bounds There is a body of work (Morgado, Heras, Liffiton, Planes, Marques-Silva and others) showing that algorithms like OLL and WPM implicitly compute or bound the LP relaxation of the MaxSAT problem. The cores generated correspond to dual variables in the LP.
+
+Lagrangian relaxation for MaxSAT Some MaxSAT solvers use Lagrangian relaxation to compute bounds, which sits between the Benders and DW worlds, exactly as in OR.
+
+Column generation for pseudo-Boolean optimization There has been explicit work applying DW-style column generation to weighted partial MaxSAT and pseudo-Boolean optimization, where the subproblem structure is exploited to generate good columns.
+
+Summary Picture
+Benders decomposition  ←——— LP duality ———→  Dantzig-Wolfe
+        ↕                                            ↕
+Core-based MaxSAT      ←——— LP duality ———→  Implicit Hitting Set
+(cuts = cores)                                (columns = cores in dual)
+The communities have been converging: OR decomposition methods provide the theoretical backbone, and modern MaxSAT solvers increasingly exploit LP bounds and decomposition structures that OR researchers would recognize immediately. The IHS framework is perhaps the clearest bridge, and it has inspired hybrid solvers that combine SAT oracles with IP master problems in a way that would feel very familiar to someone working with branch and price.
+
+Is there any paper showing such a connection?
+
+19 May
+
+Thinking about identifying academic research supporting an unspecified connection
+Thinking about identifying academic research supporting an unspecified connection
+Good — I now have enough to give a well-sourced, honest answer. Let me summarize what the literature actually shows.
+
+The honest answer is: there is no single paper making the connection you'd expect, but the pieces exist and have been assembled gradually. Here's what the literature actually says:
+
+What Exists on the Benders Side (Well-Established)
+The clearest documented connection is between core-guided MaxSAT and Logic-Based Benders Decomposition. Hooker's chapter on LBBD explicitly cites MaxSAT work (Davies & Bacchus's "Solving MAXSAT by solving a sequence of simpler SAT instances"), acknowledging the structural parallel. Hooker's framework allows the subproblem to be any optimization problem — not just LP — and cores returned by a SAT solver fit naturally as the inference-based cuts of LBBD. 
+Cmu
+
+The Closest Thing to a Formal Connection Paper
+The most rigorous bridge between the two communities comes from two directions:
+
+1. Katsirelos (SAT 2023) — explicit LP connection This paper focuses on PMRES and OLL, two core-guided MaxSAT algorithms, and shows that they implicitly discover cores of the original formula. Moreover, it gives compact integer linear programs for each which encode the hitting set problem underlying the algorithm. The paper further shows that OLL can be restated as an algorithm that explicitly computes a feasible dual solution of an LP relaxation of MaxSAT, opening a large increase of the potential design space for such algorithms. This is the LP duality connection that would underpin any Dantzig-Wolfe analogy. 
+Dagstuhl
+Dagstuhl
+
+2. The Implicit Hitting Set framework (Davies & Bacchus 2011/2013) IHS solvers extract cores, but then use an integer programming solver to compute a minimum-cost hitting set of the accumulated set of cores. The loop (SAT oracle → core → IP master → back) is structurally a decomposition in the OR sense, and several papers note this parallel without formalizing it as Benders or Dantzig-Wolfe specifically. 
+ResearchGate
+
+Why No Paper Explicitly Says "Dantzig-Wolfe"
+The communities have largely developed in parallel, and the connection to Dantzig-Wolfe specifically hasn't been formalized, for a few reasons:
+
+The MaxSAT community tends to frame things in terms of cores and hitting sets, not columns and pricing.
+The LP duality that would make the DW connection precise was only clarified recently (Katsirelos 2023, and the follow-up "Core-Guided Linear Programming-Based Maximum Satisfiability" at SAT 2025).
+These papers established much of the theoretical framework for understanding modern core-guided MaxSAT solving, but do not contain empirical analysis and are orthogonal to solver engineering work. 
+Dagstuhl
+Summary
+Connection	Paper	Explicitness
+Core-guided MaxSAT ↔ Logic-Based Benders	Hooker (LBBD survey, 2019); implicitly in many MaxSAT papers	Moderate — acknowledged, not fully formalized
+IHS MaxSAT ↔ IP decomposition	Davies & Bacchus (2013), Moreno-Centeno & Karp (2013)	High — IHS is literally IP + SAT oracle
+Core-guided algorithms ↔ LP dual variables	Katsirelos SAT 2023, SAT 2025	High — explicit LP encoding
+Core-guided MaxSAT ↔ Dantzig-Wolfe	—	No explicit paper; connection is implicit through duality
+If this is for research purposes, Katsirelos's SAT 2023 paper ("An Analysis of Core-Guided Maximum Satisfiability Solvers Using Linear Programming") is probably the closest existing work to what you're looking for, and writing a paper that makes the Dantzig-Wolfe connection explicit could itself be a contribution.
+
+Write a short LaTeX scientific report linking core-guided maxsat solving with Benders decomposition and IHS maxsat solving with Dantzig-Wolfe decomposition.
+
+12:31
+
+Synthesized advanced optimization decomposition methodologies
+Synthesized advanced optimization decomposition methodologies
+Here's your 8-page report with both the compiled PDF and the LaTeX source. It covers:
+
+Section 2 — Preliminaries on MaxSAT, the hitting set LP formulation, and both decomposition methods
+Section 3 — Core-guided MaxSAT mapped onto Logic-Based Benders Decomposition, with cores as inference-dual Benders cuts
+Section 4 — IHS MaxSAT mapped onto Dantzig-Wolfe via LP duality of the hitting set formulation, with the SAT oracle as a pricing subproblem
+Section 5 — The "duality square" diagram unifying all four methods
+Section 6 — Discussion of implications (warm-starting, cut strengthening, stabilization, hybrids) and limitations
+The report includes TikZ diagrams for the Benders loop, the DW loop, and the unifying square, plus two mapping tables and references to the key papers (Hooker 2003, Davies & Bacchus 2011/2013, Katsirelos 2023/2025, Moreno-Centeno & Karp 2013, etc.).
