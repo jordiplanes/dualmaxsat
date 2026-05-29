@@ -1,0 +1,20 @@
+c Larger weighted instance: 5 conflicting unit-clause pairs with asymmetric
+c weights, one hard tying clause, and one soft clause that participates in
+c multiple cores. Designed so the techniques have something to work on.
+c Variables: 1..5. Top weight = sum of soft weights + 1 = 44.
+p wcnf 5 12 44
+c -- pairs (low weight, high weight) on each variable --
+1 1 0
+5 -1 0
+2 2 0
+4 -2 0
+3 3 0
+6 -3 0
+4 4 0
+3 -4 0
+5 5 0
+2 -5 0
+c -- hard clause: a or b or c --
+44 1 2 3 0
+c -- extra soft clause participating in multiple cores (weight 8) --
+8 -1 -2 -3 -4 -5 0
