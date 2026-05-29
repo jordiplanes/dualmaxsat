@@ -1,5 +1,9 @@
 https://claude.ai/chat/822998ce-d419-4a39-8705-a72fe41871b4
 
+laptop:
+claude --resume 75ae5f13-3ead-46f7-acbe-87ea163d9684
+
+
 Is there a relation between Dantzig-Wolfe decomposition and core-based maxsat solving?
 
 19 May
