@@ -1,29 +1,16 @@
 %======================================================================
-\part*{Part I — Core-Guided and IHS MaxSAT as Benders and Dantzig--Wolfe Decomposition}
-\addcontentsline{toc}{part}{Part I — Core-Guided and IHS MaxSAT as Benders and Dantzig--Wolfe Decomposition}
+\section{Core-Guided and IHS MaxSAT as Benders and Dantzig--Wolfe Decomposition}
+\label{sec:part1}
 %======================================================================
 
-\begin{abstract}
-Maximum Satisfiability (MaxSAT) and Mixed-Integer Programming (MIP) are two
-major frameworks for combinatorial optimization that have largely developed in
-separate communities. In this part we draw explicit structural parallels
-between two families of MaxSAT algorithms and two classical decomposition
-methods from operations research. We show that core-guided MaxSAT algorithms
-operate as instances of Logic-Based Benders Decomposition (LBBD), where
-unsatisfiable cores play the role of Benders cuts derived via inference duality.
-Dually, we argue that Implicit Hitting Set (IHS) MaxSAT solvers implement a
-form of Dantzig--Wolfe decomposition when viewed through LP duality, with the
-SAT oracle acting as a pricing subproblem that generates new constraints
-(columns in the dual). These connections unify the algorithmic landscape across
-the two communities and suggest avenues for cross-fertilization.
-\end{abstract}
-
 %----------------------------------------------------------------------
-\section{Introduction}
+\subsection{Introduction}
 \label{sec:intro}
 %----------------------------------------------------------------------
 
-Maximum Satisfiability (MaxSAT) is the optimization version of the Boolean
+Maximum Satisfiability (MaxSAT) and Mixed-Integer Programming (MIP) are two
+major frameworks for combinatorial optimization that have largely developed in
+separate communities. MaxSAT is the optimization version of the Boolean
 Satisfiability problem (SAT): given a set of hard clauses~$\mathcal{H}$ and a
 set of weighted soft clauses~$(\mathcal{S}, w)$, find a truth assignment that
 satisfies all hard clauses while maximizing the total weight of satisfied soft
@@ -44,18 +31,20 @@ duality: Benders adds \emph{rows} (cuts) to a master problem defined over
 complicating variables, while Dantzig--Wolfe adds \emph{columns} to a master
 problem defined over complicating constraints.
 
-The purpose of this part is to make explicit the structural correspondences:
+The purpose of this section is to make explicit the structural correspondences:
 \begin{itemize}
 \item Core-guided MaxSAT $\longleftrightarrow$ Logic-Based Benders Decomposition,
 \item IHS MaxSAT $\longleftrightarrow$ Dantzig--Wolfe Decomposition (in the dual).
 \end{itemize}
+These connections unify the algorithmic landscape across the two communities
+and suggest avenues for cross-fertilization.
 
 %----------------------------------------------------------------------
-\section{Preliminaries}
+\subsection{Preliminaries}
 \label{sec:prelim}
 %----------------------------------------------------------------------
 
-\subsection{MaxSAT, Cores, and Correction Sets}
+\subsubsection{MaxSAT, Cores, and Correction Sets}
 
 We fix notation for a weighted partial MaxSAT instance
 $\langle \mathcal{H}, \mathcal{S}, w \rangle$ with hard clauses~$\mathcal{H}$,
@@ -68,7 +57,7 @@ hitting-set duality of~\citet{liffiton2008algorithms}, every minimal core hits
 every minimal correction set and vice versa---a fact we will use
 repeatedly.
 
-\subsection{Core-Guided and IHS Algorithms}
+\subsubsection{Core-Guided and IHS Algorithms}
 
 The two algorithm families differ in \emph{where} they accumulate information about the instance.
 
@@ -124,7 +113,7 @@ IHS solvers~\citep{davies2011solving,davies2013exploiting} separate the two resp
 
 At termination of Algorithm~\ref{alg:ihs}, the optimal cost equals $\sum_{s \in H^*} w(s)$ because (i)~$H^*$ is a minimum hitting set of all known cores, giving a lower bound, and (ii)~the SAT oracle confirms that $\mathcal{S} \setminus H^*$ is satisfiable together with $\mathcal{H}$, so $H^*$ is an achievable correction set and hence an upper bound. The lower and upper bounds coincide, certifying optimality.
 
-\subsection{The LP Relaxation of MaxSAT}
+\subsubsection{The LP Relaxation of MaxSAT}
 
 Introduce a binary variable $y_i \in \{0,1\}$ for each soft clause $s_i$,
 where $y_i = 1$ means $s_i$ is falsified. The MaxSAT problem can be written as
@@ -139,7 +128,7 @@ at least one falsified soft clause. This is the \emph{hitting set}
 formulation, and there are exponentially many core constraints. The LP
 relaxation replaces~\eqref{eq:maxsat-int} with $0 \leq y_i \leq 1$.
 
-\subsection{Benders Decomposition}
+\subsubsection{Benders Decomposition}
 
 Recall that classical Benders~\citep{benders1962partitioning} fixes
 complicating variables~$\bar{x}$ in the master, solves an LP subproblem
@@ -179,7 +168,7 @@ The key degree of freedom in LBBD is \textsc{InferenceDual}: when the subproblem
 is an LP, it returns the classical Benders cut from dual multipliers; when the
 subproblem is a SAT call, it returns a combinatorial cut (an unsatisfiable core).
 
-\subsection{Dantzig--Wolfe Decomposition}
+\subsubsection{Dantzig--Wolfe Decomposition}
 
 Dantzig--Wolfe~\citep{dantzigwolfe1960} dualizes the setting: it reformulates
 an LP with complicating \emph{constraints} by representing the tractable
@@ -219,11 +208,11 @@ that master, which is precisely the Dantzig--Wolfe master. The two algorithms
 are therefore dual views of the same iterative refinement process.
 
 %----------------------------------------------------------------------
-\section{Core-Guided MaxSAT as Benders Decomposition}
+\subsection{Core-Guided MaxSAT as Benders Decomposition}
 \label{sec:benders}
 %----------------------------------------------------------------------
 
-\subsection{The Decomposition Structure}
+\subsubsection{The Decomposition Structure}
 
 A core-guided MaxSAT algorithm operates in the following loop:
 \begin{enumerate}
@@ -256,7 +245,7 @@ Inference dual & SAT refutation proof (e.g., resolution) \\
 \end{tabular}
 \end{center}
 
-\subsection{The Inference Dual Perspective}
+\subsubsection{The Inference Dual Perspective}
 
 In classical Benders, the cut $\pi^T b \leq z$ is derived from the LP dual of
 the subproblem. In LBBD, the cut comes from any valid proof. In core-guided
@@ -270,7 +259,7 @@ cut
 \]
 This is a \emph{combinatorial Benders cut}~\citep{hooker2003logic,codato2006combinatorial}: a linear inequality derived from a logical deduction rather than from LP duality.
 
-\subsection{Formula Transformation as Implicit Cut Accumulation}
+\subsubsection{Formula Transformation as Implicit Cut Accumulation}
 
 Core-guided solvers such as PMRES and OLL do not maintain an explicit master
 IP. Instead, they transform the formula by adding relaxation variables and
@@ -310,11 +299,11 @@ extraction step corresponding to one iteration of the LBBD loop.
 \end{figure}
 
 %----------------------------------------------------------------------
-\section{IHS MaxSAT as Dantzig--Wolfe Decomposition}
+\subsection{IHS MaxSAT as Dantzig--Wolfe Decomposition}
 \label{sec:dw}
 %----------------------------------------------------------------------
 
-\subsection{The Implicit Hitting Set Framework}
+\subsubsection{The Implicit Hitting Set Framework}
 
 The IHS algorithm~\citep{davies2011solving,moreno2013implicit} operates as follows:
 \begin{enumerate}
@@ -326,7 +315,7 @@ The IHS algorithm~\citep{davies2011solving,moreno2013implicit} operates as follo
 \item Add $\kappa_{k+1}$ as a new constraint and repeat.
 \end{enumerate}
 
-\subsection{The Dantzig--Wolfe Connection via LP Duality}
+\subsubsection{The Dantzig--Wolfe Connection via LP Duality}
 
 To see the Dantzig--Wolfe structure, consider the LP dual of the hitting set
 formulation~\eqref{eq:maxsat-obj}--\eqref{eq:maxsat-core}. Let $\mathcal{K} =
@@ -397,7 +386,7 @@ formulation.
 \label{fig:dw}
 \end{figure}
 
-\subsection{LP Bounds and Convergence}
+\subsubsection{LP Bounds and Convergence}
 
 In Dantzig--Wolfe decomposition, the restricted master LP provides a bound
 that improves monotonically as columns are added, converging to the LP
@@ -413,7 +402,7 @@ that encodes the same hitting set structure. This means that both families
 of algorithms---core-guided and IHS---are optimizing over the \emph{same}
 LP relaxation, but from opposite sides of duality.
 
-\subsection{What the Analogy Preserves, and What It Doesn't}
+\subsubsection{What the Analogy Preserves, and What It Doesn't}
 \label{sec:preserves}
 
 The Dantzig--Wolfe view is illuminating but is not a textbook instantiation
@@ -481,7 +470,7 @@ Techniques that rely on polynomial pricing or LP master geometry should not
 be expected to transfer without adaptation.
 
 %----------------------------------------------------------------------
-\section{A Worked Example}
+\subsection{A Worked Example}
 \label{sec:example}
 %----------------------------------------------------------------------
 
@@ -574,7 +563,7 @@ the other by computing it explicitly via an IP master (Dantzig--Wolfe-style on
 the dual).
 
 %----------------------------------------------------------------------
-\section{The Unified Picture}
+\subsection{The Unified Picture}
 \label{sec:unified}
 %----------------------------------------------------------------------
 
@@ -620,7 +609,7 @@ directly tightens the relaxation. This mirrors the well-known tradeoff in
 OR between cut-based and column-based approaches.
 
 %----------------------------------------------------------------------
-\section{Transferable Techniques from OR to MaxSAT}
+\subsection{Transferable Techniques from OR to MaxSAT}
 \label{sec:techniques}
 %----------------------------------------------------------------------
 
@@ -631,7 +620,7 @@ duality and the soundness of the pricing oracle should transfer essentially
 unchanged. This section collects the most actionable candidates, in roughly
 increasing order of implementation cost.
 
-\subsection{Cross-Family Warm-Starting}
+\subsubsection{Cross-Family Warm-Starting}
 
 The cheapest hybrid technique is initialization. A short run of one algorithm
 produces information that warm-starts the other, just as OR practitioners
@@ -655,7 +644,7 @@ This requires no algorithmic surgery---only sharing the data structure that
 holds discovered cores---and so is the most accessible of the techniques
 listed.
 
-\subsection{Pareto-Optimal Core Selection}
+\subsubsection{Pareto-Optimal Core Selection}
 
 A SAT oracle that returns UNSAT typically admits many valid cores; modern
 conflict-driven solvers return one based on internal heuristics, not on what
@@ -674,7 +663,7 @@ soundness does not depend on which specific core is returned, this is a pure
 orthogonal improvement and can be layered on top of existing IHS or
 core-guided implementations.
 
-\subsection{Dual Stabilization for IHS}
+\subsubsection{Dual Stabilization for IHS}
 
 The IHS master, viewed as the dual of the packing
 LP~\eqref{eq:dual-obj}--\eqref{eq:dual-nn}, suffers from the same instabilities
@@ -709,7 +698,7 @@ IHS by keeping a small set of past hitting sets and choosing the next probe
 via a proximal step; this is more disruptive to implement but is the standard
 heavy-machinery response to tailing-off in column generation.
 
-\subsection{Price-Aware Core Extraction}
+\subsubsection{Price-Aware Core Extraction}
 
 A more invasive idea draws on Lagrangian relaxation. The dual prices~$\bar{y}$
 from the master's LP relaxation can be interpreted as a measure of how
@@ -727,7 +716,7 @@ theoretical foundation: it is the MaxSAT analog of running the pricing
 subproblem with the current dual prices as objective, which is the defining
 operation of column generation.
 
-\subsection{Toward Hybrid Primal--Dual Solvers}
+\subsubsection{Toward Hybrid Primal--Dual Solvers}
 
 Together, the techniques above point toward a unified solver that maintains
 both representations simultaneously: an explicit IP master (IHS-side) and a
@@ -741,7 +730,7 @@ core-guided algorithms explicit and therefore composable with an IHS-style
 IP master.
 
 %----------------------------------------------------------------------
-\section{Discussion}
+\subsection{Discussion}
 \label{sec:discussion}
 %----------------------------------------------------------------------
 
@@ -758,7 +747,7 @@ cores; soundness of the SAT oracle as a pricing routine) and what is not
 (polynomial pricing, LP master geometry, primal Minkowski decomposition).
 
 %----------------------------------------------------------------------
-\section{Future Work}
+\subsection{Future Work}
 \label{sec:future}
 %----------------------------------------------------------------------
 
@@ -799,7 +788,7 @@ branch-and-cut. Naming the empty cells of the analogy is often where the
 genuine research opportunities lie.
 
 %----------------------------------------------------------------------
-\section{Part I Conclusion}
+\subsection{Conclusion}
 \label{sec:conclusion}
 %----------------------------------------------------------------------
 
@@ -818,5 +807,3 @@ Making these connections explicit opens a two-way transfer of techniques
 between the OR and SAT communities, from cut strengthening and stabilization
 to hybrid primal-dual algorithms that leverage the strengths of both
 decomposition paradigms.
-
-

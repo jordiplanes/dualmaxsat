@@ -1,25 +1,23 @@
 %======================================================================
-\part*{Part III — Empirical Evaluation of IHS for Weighted CSPs (Petrova, Larrosa, Roll\'on, 2025)}
-\addcontentsline{toc}{part}{Part III — Empirical Evaluation of IHS for Weighted CSPs}
+\section{Empirical Evaluation of IHS for Weighted CSPs (Petrova, Larrosa, Roll\'on, 2025)}
+\label{sec:part3}
 %======================================================================
 
-\begin{abstract}
-This part summarizes the method and findings of~\citet{petrova2025empirical},
-who carry out an empirical study of IHS for the Weighted CSP framework. Where
-Parts~I--II frame IHS theoretically as Dantzig--Wolfe on the dual packing LP,
-Petrova et~al.\ vary the two main algorithmic axes (computation of hitting
-vectors and core improvement) and report on 32 configurations across a
-heterogeneous benchmark suite. The two studies are complementary: the OR
-framing in Parts~I--II predicts that techniques relaxing the hitting-vector
-subproblem and that strengthen cores should both pay off; the empirical study
-confirms this is benchmark-dependent but identifies cost-function merging
-combined with maximal-core extraction as the most robust default.
-\end{abstract}
-
 %----------------------------------------------------------------------
-\section{Problem setting: Weighted CSP}
+\subsection{Problem Setting: Weighted CSP}
 \label{sec:wcsp}
 %----------------------------------------------------------------------
+
+This section summarizes the method and findings of~\citet{petrova2025empirical},
+who carry out an empirical study of IHS for the Weighted CSP framework. Where
+the preceding sections frame IHS theoretically as Dantzig--Wolfe on the dual
+packing LP, Petrova et~al.\ vary the two main algorithmic axes (computation of
+hitting vectors and core improvement) and report on 32 configurations across a
+heterogeneous benchmark suite. The two studies are complementary: the OR
+framing predicts that techniques relaxing the hitting-vector subproblem and that
+strengthen cores should both pay off; the empirical study confirms this is
+benchmark-dependent but identifies cost-function merging combined with
+maximal-core extraction as the most robust default.
 
 A \emph{Weighted Constraint Satisfaction Problem} (WCSP) is a triple
 $(X, C, F)$ where $X$ is a set of variables over finite domains, $C$ is a set
@@ -32,7 +30,7 @@ weighted MaxSAT: each soft clause becomes a unary cost function over its
 falsification indicator, and hard clauses move into $C$.
 
 %----------------------------------------------------------------------
-\section{Vector-valued IHS for WCSP}
+\subsection{Vector-Valued IHS for WCSP}
 \label{sec:vecihs}
 %----------------------------------------------------------------------
 
@@ -63,7 +61,7 @@ $w^\star$}. The IHS task is therefore to compute a set $\mathcal{K}$ that
 dominates every such goal core and an optimal solution.
 
 %----------------------------------------------------------------------
-\section{Baseline algorithm}
+\subsection{Baseline Algorithm}
 \label{sec:baseline}
 %----------------------------------------------------------------------
 
@@ -102,14 +100,14 @@ variant decomposes into two NP-hard pieces: the hitting-vector subproblem
 (integer optimization) and the induced CSP (decision).
 
 %----------------------------------------------------------------------
-\section{Algorithmic alternatives (the 32 implementations)}
+\subsection{Algorithmic Alternatives (the 32 Implementations)}
 \label{sec:alts}
 %----------------------------------------------------------------------
 
 The paper isolates two design axes and crosses them with one preprocessing
 choice, yielding $4 \times 4 \times 2 = 32$ implementations.
 
-\subsection{Axis 1 --- Computation of hitting vectors (4 options)}
+\subsubsection{Axis 1 --- Computation of Hitting Vectors (4 Options)}
 
 \begin{itemize}
 \item \textbf{\textsc{MinCostHV} (IHS-\emph{lb}).} Optimal hitting vector via
@@ -133,10 +131,10 @@ but with fallback to \textsc{CostBoundedHV}.
 
 The intent of relaxing \textsc{MinCostHV} to a cost-bounded or greedy variant
 is the same that motivates in-out separation and dual stabilization in
-column generation (Part~I, \S\ref{sec:techniques}): cheaper, less-optimal
+column generation (\S\ref{sec:techniques}): cheaper, less-optimal
 probe points trade per-iteration cost for iteration count.
 
-\subsection{Axis 2 --- Core improvement (\textsc{ImprCore}, 4 options)}
+\subsubsection{Axis 2 --- Core Improvement (\textsc{ImprCore}, 4 Options)}
 
 All four variants take a hitting vector $\vec{h}$ that is a core and grow it
 into a larger core $\vec{k} \ge \vec{h}$ by incrementing components while
@@ -167,11 +165,11 @@ minimum value is as large as possible makes them more costly to hit,
 accelerating the lower bound.
 
 The maximal-cores option is the analog of Pareto-optimal core selection in
-Part~I (\S\ref{sec:techniques}, \citet{magnanti1981accelerating}): both
+\S\ref{sec:techniques} (\citet{magnanti1981accelerating}): both
 strengthen the cuts/columns generated per oracle call at a higher
 per-iteration price.
 
-\subsection{Axis 3 --- Cost-function merging (with vs.\ without)}
+\subsubsection{Axis 3 --- Cost-Function Merging (With vs.\ Without)}
 
 A preprocessing step (see~\citet{petrova2025empirical} and references therein)
 heuristically clusters cost functions along a tree decomposition and
@@ -179,7 +177,7 @@ heuristically clusters cost functions along a tree decomposition and
 domain. This shrinks the dimensionality of the cost-vector space and is shown
 empirically to be the single most impactful design choice.
 
-\subsection{Implementation choices}
+\subsubsection{Implementation Choices}
 
 \begin{itemize}
 \item \textsc{MinCostHV} and \textsc{CostBoundedHV} are modelled as 0/1 IPs
@@ -194,7 +192,7 @@ covering multiple branches simultaneously), as in~\citet{allouche2015anytime}.
 \end{itemize}
 
 %----------------------------------------------------------------------
-\section{Empirical landscape (high-level)}
+\subsection{Empirical Landscape (High-Level)}
 \label{sec:wcspresults}
 %----------------------------------------------------------------------
 
@@ -237,12 +235,12 @@ Pedigree). These two structural features (small domains, few distinct
 costs) appear to be the most reliable proxy for IHS suitability.
 
 %----------------------------------------------------------------------
-\section{Connection to Parts~I and~II}
+\subsection{Connection to the Preceding Sections}
 \label{sec:wcspconnect}
 %----------------------------------------------------------------------
 
 The two design axes Petrova et~al.\ vary line up cleanly with the OR-derived
-techniques framed in Part~I (\S\ref{sec:techniques}).
+techniques framed in Section~\ref{sec:part1} (\S\ref{sec:techniques}).
 
 \begin{itemize}
 \item \textbf{Axis 1 (hitting-vector relaxation) $\leftrightarrow$
@@ -263,28 +261,26 @@ preprocessing techniques (e.g.\ aggregation in column generation) that
 reduce master dimension prior to solving.
 \end{itemize}
 
-Two features of the paper depart from the Parts~I--II framing. First, the
-paper does not consider an \emph{LP-relaxation} view of the hitting-vector
-subproblem, hence none of its variants exploit fractional dual prices
-$\bar{y}$; the price-aware extraction and Wentges stabilization techniques
-of Part~I are therefore complementary rather than overlapping. Second, the
-paper does \emph{not} consider warm-starting from a complementary algorithm
-(e.g.\ Toulbar2's incremental lower bound, or a short core-guided phase);
-cross-family warm-starting (Part~I, \S\ref{sec:techniques}) is an
+Two features of the paper depart from the framing of the preceding sections.
+First, the paper does not consider an \emph{LP-relaxation} view of the
+hitting-vector subproblem, hence none of its variants exploit fractional dual
+prices $\bar{y}$; the price-aware extraction and Wentges stabilization
+techniques of Section~\ref{sec:part1} are therefore complementary rather than
+overlapping. Second, the paper does \emph{not} consider warm-starting from a
+complementary algorithm (e.g.\ Toulbar2's incremental lower bound, or a short
+core-guided phase); cross-family warm-starting (\S\ref{sec:techniques}) is an
 unexplored direction.
 
 The empirical evidence on the cost-function merging axis is also a
 cautionary note for theoretical analyses that treat the cost-function
 collection as fixed: merging changes the effective dimensionality of the
-hitting-vector space, which Parts~I--II do not model and which dominates
-solver performance.
+hitting-vector space, which the preceding sections do not model and which
+dominates solver performance.
 
-\paragraph{Summary.} Parts~I--II provide a structural reason to expect that
-relaxed hitting-vector subproblems and stronger cores both help; the empirical
-study of~\citet{petrova2025empirical} confirms the latter (maximal cores) and
-qualifies the former (cost-bounded helps mainly via assumption-based SAT,
-greedy heuristics need better design). The complementarity is clean: the OR
-framing identifies the design axes worth varying, and the empirical study
-populates them with measured trade-offs.
-
-
+\paragraph{Summary.} The preceding sections provide a structural reason to
+expect that relaxed hitting-vector subproblems and stronger cores both help;
+the empirical study of~\citet{petrova2025empirical} confirms the latter
+(maximal cores) and qualifies the former (cost-bounded helps mainly via
+assumption-based SAT, greedy heuristics need better design). The
+complementarity is clean: the OR framing identifies the design axes worth
+varying, and the empirical study populates them with measured trade-offs.

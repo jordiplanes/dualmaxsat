@@ -1,29 +1,27 @@
 %======================================================================
-\part*{Part II — Is IHS for MaxSAT Equivalent to Dantzig--Wolfe? A Worked Example and a Counterexample}
-\addcontentsline{toc}{part}{Part II — IHS = Dantzig--Wolfe? Worked Example and Counterexample}
+\section{Is IHS for MaxSAT Equivalent to Dantzig--Wolfe? A Worked Example and a Counterexample}
+\label{sec:part2}
 %======================================================================
 
-\begin{abstract}
-Part~I argued that Implicit Hitting Set (IHS) MaxSAT solvers implement
-Dantzig--Wolfe (DW) decomposition, viewed through LP duality. Here we
-test that claim concretely. We first state the equivalence precisely and prove
-the row/column duality that underlies it. We then \emph{work a small instance
-step by step}, running IHS and DW column generation side by side and observing
-that they generate the same cores, in the same order, with the same bounds, and
-terminate with the same value. Finally we exhibit a \emph{counterexample}: a
-three-clause instance on which DW column generation terminates at the value
-$3/2$ while IHS---and the true MaxSAT optimum---is $2$. The resolution is sharp:
-\textbf{IHS with an LP master is exactly DW on the dual core-packing LP, but the
-IHS used in practice solves the master as an integer program, which is strictly
-stronger than DW and breaks literal equivalence.} The equivalence is therefore
-real but conditional, and the condition (LP vs.\ integer master) is exactly the
-integrality gap of the hitting-set polytope.
-\end{abstract}
-
 %----------------------------------------------------------------------
-\section{The claim, stated precisely}
+\subsection{The Claim, Stated Precisely}
 \label{sec:claim}
 %----------------------------------------------------------------------
+
+Section~\ref{sec:part1} argued that Implicit Hitting Set (IHS) MaxSAT solvers
+implement Dantzig--Wolfe (DW) decomposition, viewed through LP duality. Here we
+test that claim concretely. We first state the equivalence precisely and prove
+the row/column duality that underlies it. We then work a small instance step by
+step, running IHS and DW column generation side by side and observing that they
+generate the same cores, in the same order, with the same bounds, and terminate
+with the same value. Finally we exhibit a counterexample: a three-clause
+instance on which DW column generation terminates at the value $3/2$ while
+IHS---and the true MaxSAT optimum---is $2$. The resolution is sharp: \textbf{IHS
+with an LP master is exactly DW on the dual core-packing LP, but the IHS used in
+practice solves the master as an integer program, which is strictly stronger than
+DW and breaks literal equivalence.} The equivalence is therefore real but
+conditional, and the condition (LP vs.\ integer master) is exactly the
+integrality gap of the hitting-set polytope.
 
 Fix a weighted partial MaxSAT instance $\langle \mathcal{H}, \mathcal{S}, w
 \rangle$ with soft clauses $\mathcal{S} = \{s_1,\dots,s_m\}$ and weights
@@ -70,7 +68,7 @@ as an integer program (\textbf{IHS-IP}, the practical solver, e.g.\ MaxHS) or as
 its LP relaxation (\textbf{IHS-LP}).
 
 %----------------------------------------------------------------------
-\section{The exact equivalence (LP master)}
+\subsection{The Exact Equivalence (LP Master)}
 \label{sec:equiv}
 %----------------------------------------------------------------------
 
@@ -141,14 +139,14 @@ so it is column generation in general, of which DW is the special case where
 columns are extreme points of a fixed polyhedron.
 
 %----------------------------------------------------------------------
-\section{A step-by-step example where they coincide}
+\subsection{A Step-by-Step Example Where They Coincide}
 \label{sec:worked}
 %----------------------------------------------------------------------
 
 We now make Proposition~\ref{prop:equiv} concrete on an instance whose
 hitting-set polytope is \emph{integral}, so IHS-IP, IHS-LP, and DW all agree.
 
-\subsection{The instance \texorpdfstring{$P_4$}{P4}}
+\subsubsection{The Instance \texorpdfstring{$P_4$}{P4}}
 
 Four soft \emph{unit} clauses with unit weight,
 \[
@@ -172,7 +170,7 @@ $z^\star = z^\star_{\mathrm{LP}} = 2$ (e.g.\ cover $\{s_2,s_3\}$; equivalently
 the MaxSAT optimum keeps the independent set $\{x_1,x_3\}$ true and falsifies
 two clauses).
 
-\subsection{Running IHS-IP and DW in lockstep}
+\subsubsection{Running IHS-IP and DW in Lockstep}
 
 We let the SAT oracle, when several cores are unhit, return them in the fixed
 order $\kappa_a, \kappa_b, \kappa_c$ (any common rule works). Table~\ref{tab:trace-p4}
@@ -230,13 +228,13 @@ caveats is that $z^\star = z^\star_{\mathrm{LP}}$: the integer master never
 disagrees with the LP master.
 
 %----------------------------------------------------------------------
-\section{A counterexample: the triangle of cores}
+\subsection{A Counterexample: The Triangle of Cores}
 \label{sec:counter}
 %----------------------------------------------------------------------
 
 Equivalence is conditional on that last clause. We now remove the condition.
 
-\subsection{The instance \texorpdfstring{$K_3$}{K3}}
+\subsubsection{The Instance \texorpdfstring{$K_3$}{K3}}
 
 Three soft unit clauses with unit weight and the ``at most one true'' hard
 clauses,
@@ -253,7 +251,8 @@ forming a triangle $K_3$---an \emph{odd} cycle, hence non-bipartite, hence with
 a fractional vertex-cover gap. The true MaxSAT optimum: at most one $x_i$ may be
 true, so at least two soft clauses are falsified, and $z^\star = 2$.
 
-\subsection{What DW computes}
+\subsubsection{What DW Computes}
+\label{sec:dwcomputes}
 
 The full dual packing LP~\eqref{eq:pack} is
 \[
@@ -272,7 +271,8 @@ cores are columns, the prices are $y=(\tfrac12,\tfrac12,\tfrac12)$, every core
 has reduced cost $1 - (\tfrac12+\tfrac12) = 0$, no improving column exists, and
 DW \textbf{terminates with value $\boldsymbol{3/2}$}.
 
-\subsection{What IHS computes}
+\subsubsection{What IHS Computes}
+\label{sec:ihscomputes}
 
 IHS generates the same three cores, but its master is the \emph{integer} hitting
 set
@@ -313,7 +313,8 @@ decomposition.
 
 \begin{proof}
 The triangle instance $K_3$. DW terminates at $z^\star_{\mathrm{LP}} = 3/2$
-(\S5.2); IHS-IP terminates at $z^\star = 2$ (\S5.3). $3/2 \ne 2$.
+(\S\ref{sec:dwcomputes}); IHS-IP terminates at $z^\star = 2$
+(\S\ref{sec:ihscomputes}). $3/2 \ne 2$.
 \end{proof}
 
 The counterexample is not pathological: $K_3$ is the smallest odd cycle, and the
@@ -324,7 +325,7 @@ it is the \emph{integer} master that creates the discrepancy---and the integer
 master is precisely what makes IHS a correct MaxSAT solver.
 
 %----------------------------------------------------------------------
-\section{Reconciliation and subtleties}
+\subsection{Reconciliation and Subtleties}
 \label{sec:subtle}
 %----------------------------------------------------------------------
 
@@ -368,14 +369,14 @@ under the dual reading of Lemma~\ref{lem:rowcol}.
 On the primal side IHS adds \emph{rows} (cores) to a master over the
 complicating variables $y$---textbook \emph{Benders / cutting planes}. By
 Lemma~\ref{lem:rowcol} that is identically \emph{column generation
-(Dantzig--Wolfe)} on the dual. So Part~I's ``duality square'' is
-right: IHS is simultaneously a Benders-style and a DW-style method, the two
+(Dantzig--Wolfe)} on the dual. So the duality square of Section~\ref{sec:unified}
+is right: IHS is simultaneously a Benders-style and a DW-style method, the two
 being the same LP object seen from opposite sides. The single caveat the square
 omits is that the practical master is integer, which sits \emph{above} both LP
 methods.
 
 %----------------------------------------------------------------------
-\section{Verdict}
+\subsection{Verdict}
 \label{sec:verdict}
 %----------------------------------------------------------------------
 
@@ -402,5 +403,3 @@ In one sentence: \emph{IHS is Dantzig--Wolfe on the dual packing LP precisely up
 to the integrality gap of the hitting-set polytope---and that gap, which DW
 cannot close but the integer IHS master can, is exactly what makes IHS a correct
 MaxSAT solver rather than merely an LP-bound computation.}
-
-

@@ -31,30 +31,6 @@
 
 \maketitle
 
-\begin{abstract}
-This memo collects three companion notes that, taken together, give a layered
-picture of Implicit Hitting Set (IHS) algorithms for weighted Boolean and
-constraint problems. \textbf{Part~I} develops the operations-research framing:
-core-guided MaxSAT algorithms are an instance of Logic-Based Benders
-Decomposition, while IHS MaxSAT is a Dantzig--Wolfe decomposition on the LP dual
-of the hitting-set formulation; both connect via row--column duality, and the
-view suggests a portfolio of transferable techniques (warm-starting,
-Pareto-optimal cuts, dual stabilization, price-aware extraction).
-\textbf{Part~II} pressure-tests the central slogan ``IHS is Dantzig--Wolfe in
-the dual.'' We work the equivalence step-by-step on an instance whose
-hitting-set polytope is integral ($P_4$) and exhibit a small counterexample
-($K_3$) where IHS-LP/DW terminate at $3/2$ but the integer IHS master---and
-the true optimum---is $2$. The resolution is sharp: practical IHS equals
-Dantzig--Wolfe on the dual core-packing LP \emph{up to the integrality gap of
-the hitting-set polytope}. \textbf{Part~III} reviews the recent empirical
-evaluation of IHS for the Weighted CSP framework by Petrova, Larrosa, and
-Roll\'on~\citep{petrova2025empirical}, which independently studies the same
-algorithmic axes (hitting-vector computation and core improvement) on a broad
-benchmark suite. The empirical evidence reinforces the structural reading: no
-single configuration dominates, but cost-function merging plus maximal-core
-improvement is a robust default.
-\end{abstract}
-
 \tableofcontents
 
 \input{part1}
