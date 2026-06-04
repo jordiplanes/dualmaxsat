@@ -1,0 +1,290 @@
+%======================================================================
+\part*{Part III — Empirical Evaluation of IHS for Weighted CSPs (Petrova, Larrosa, Roll\'on, 2025)}
+\addcontentsline{toc}{part}{Part III — Empirical Evaluation of IHS for Weighted CSPs}
+%======================================================================
+
+\begin{abstract}
+This part summarizes the method and findings of~\citet{petrova2025empirical},
+who carry out an empirical study of IHS for the Weighted CSP framework. Where
+Parts~I--II frame IHS theoretically as Dantzig--Wolfe on the dual packing LP,
+Petrova et~al.\ vary the two main algorithmic axes (computation of hitting
+vectors and core improvement) and report on 32 configurations across a
+heterogeneous benchmark suite. The two studies are complementary: the OR
+framing in Parts~I--II predicts that techniques relaxing the hitting-vector
+subproblem and that strengthen cores should both pay off; the empirical study
+confirms this is benchmark-dependent but identifies cost-function merging
+combined with maximal-core extraction as the most robust default.
+\end{abstract}
+
+%----------------------------------------------------------------------
+\section{Problem setting: Weighted CSP}
+\label{sec:wcsp}
+%----------------------------------------------------------------------
+
+A \emph{Weighted Constraint Satisfaction Problem} (WCSP) is a triple
+$(X, C, F)$ where $X$ is a set of variables over finite domains, $C$ is a set
+of hard constraints (Boolean functions over scopes of $X$), and
+$F = \{f_1, \ldots, f_m\}$ is a set of \emph{cost functions}, each mapping
+assignments of its scope to a nonnegative cost. A solution is a complete
+assignment satisfying all constraints; its cost is the sum of cost-function
+values; the goal is a minimum-cost solution $w^\star$. WCSP generalizes
+weighted MaxSAT: each soft clause becomes a unary cost function over its
+falsification indicator, and hard clauses move into $C$.
+
+%----------------------------------------------------------------------
+\section{Vector-valued IHS for WCSP}
+\label{sec:vecihs}
+%----------------------------------------------------------------------
+
+To handle multi-valued cost functions cleanly the paper recasts IHS in
+vector-valued language. A \emph{cost vector}
+$\vec{v} = (v_1, \ldots, v_m)$ assigns to each cost function $f_i$ a value
+$v_i$ that must be an actual cost occurring in $f_i$. The vector induces a
+CSP $(X, C \cup F_{\vec{v}})$ in which each soft cost function $f_i$ is
+replaced by the constraint $f_i \le v_i$. If this CSP is satisfiable, $\vec{v}$
+is a \emph{solution vector}; otherwise it is a \emph{core}. Costs and
+dominance lift componentwise: $\vec{u} \le \vec{v}$ holds iff $u_i \le v_i$ for
+all $i$; a set of vectors $\mathcal{V}$ \emph{dominates} a vector $\vec{u}$
+if some $\vec{v} \in \mathcal{V}$ has $\vec{v} \le \vec{u}$. A vector that is
+not dominated by a set of cores $\mathcal{K}$ is said to \emph{hit}
+$\mathcal{K}$; the \emph{minimum-cost hitting vector} (MHV) of $\mathcal{K}$ is
+a hitting vector of minimum cost. Computing MHV is NP-hard (it reduces to
+minimum hitting set), so it is the analog of the IHS master.
+
+Two structural bounds drive the algorithm. For any solution vector $\vec{h}$
+and any set of cores $\mathcal{K} \subseteq \mathit{Cores}$,
+\[
+\mathit{MHV}(\mathcal{K}) \;\le\; w^\star \;\le\; \mathit{cost}(\vec{h}).
+\]
+The algorithm terminates when these two bounds meet. Termination is
+characterized in terms of \emph{goal cores}: $\mathit{MHV}(\mathcal{K}) = w^\star$
+iff $\mathcal{K}$ dominates every \emph{maximal core of cost less than
+$w^\star$}. The IHS task is therefore to compute a set $\mathcal{K}$ that
+dominates every such goal core and an optimal solution.
+
+%----------------------------------------------------------------------
+\section{Baseline algorithm}
+\label{sec:baseline}
+%----------------------------------------------------------------------
+
+The baseline IHS algorithm (\textsc{IHS-lb}) is given in
+Algorithm~\ref{alg:ihs-lb}. It maintains a working core set $\mathcal{K}$ with
+a lower bound $\mathit{lb}$ and an upper bound $\mathit{ub}$. At each
+iteration it computes an MHV $\vec{h}$ of $\mathcal{K}$ (raising
+$\mathit{lb}$), solves the induced CSP and, if unsatisfiable, calls a routine
+$\textsc{ImprCore}$ that grows $\vec{h}$ into an improved core
+$\vec{k} \ge \vec{h}$, which is added to $\mathcal{K}$.
+
+\begin{algorithm}[t]
+\caption{Baseline IHS for WCSP (\textsc{IHS-lb}). $\textsc{MinCostHV}(\mathcal{K})$ returns a minimum-cost hitting vector; $\textsc{ImprCore}$ improves a hitting vector that is a core into a larger core.}
+\label{alg:ihs-lb}
+\begin{algorithmic}[1]
+\Require WCSP $(X, C, F)$
+\Ensure cost $w^\star$ of an optimal solution vector
+\State $\mathcal{K} \gets \emptyset$;\ $\mathit{lb} \gets 0$;\ $\mathit{ub} \gets \infty$
+\While{$\mathit{lb} < \mathit{ub}$}
+  \State $\vec{h} \gets \textsc{MinCostHV}(\mathcal{K})$;\quad $\mathit{lb} \gets \mathit{cost}(\vec{h})$
+  \If{$\textsc{SolveCSP}(X,\, C \cup F_{\vec{h}})$}
+      \State $\mathit{ub} \gets \mathit{cost}(\vec{h})$
+  \Else
+      \State $\vec{k} \gets \textsc{ImprCore}(X, C, F, \mathit{ub}, \vec{h})$;\quad $\mathcal{K} \gets \mathcal{K} \cup \{\vec{k}\}$
+  \EndIf
+\EndWhile
+\State \Return $\mathit{lb}$
+\end{algorithmic}
+\end{algorithm}
+
+A symmetric variant \textsc{IHS-ub} computes a \emph{cost-bounded} hitting
+vector (any hitting vector of cost less than the current $\mathit{ub}$,
+solved as a decision problem) instead of the cost-minimal one, prioritizing
+upper-bound tightening over lower-bound tightening. Each iteration of either
+variant decomposes into two NP-hard pieces: the hitting-vector subproblem
+(integer optimization) and the induced CSP (decision).
+
+%----------------------------------------------------------------------
+\section{Algorithmic alternatives (the 32 implementations)}
+\label{sec:alts}
+%----------------------------------------------------------------------
+
+The paper isolates two design axes and crosses them with one preprocessing
+choice, yielding $4 \times 4 \times 2 = 32$ implementations.
+
+\subsection{Axis 1 --- Computation of hitting vectors (4 options)}
+
+\begin{itemize}
+\item \textbf{\textsc{MinCostHV} (IHS-\emph{lb}).} Optimal hitting vector via
+0/1 integer programming. Each iteration strictly tightens the lower bound;
+expensive per iteration.
+
+\item \textbf{\textsc{CostBoundedHV} (IHS-\emph{ub}).} Any hitting vector of
+cost less than the current $\mathit{ub}$. A decision problem, hence cheaper;
+but the cost is not guaranteed to be below $w^\star$, so new cores need not
+contribute to the lower bound (cf.\ the goal-cores characterization above).
+
+\item \textbf{Greedy variant in \emph{lb} mode (IHS-\emph{grdlb}).} An
+inexact, heuristic hitting-vector computation that starts from
+$\vec{h} = \vec{0}$ and increments components by a ratio criterion (analogous
+to greedy vertex cover). When a greedy step fails to make progress the next
+iteration falls back to \textsc{MinCostHV}, preserving correctness.
+
+\item \textbf{Greedy variant in \emph{ub} mode (IHS-\emph{grdub}).} As above,
+but with fallback to \textsc{CostBoundedHV}.
+\end{itemize}
+
+The intent of relaxing \textsc{MinCostHV} to a cost-bounded or greedy variant
+is the same that motivates in-out separation and dual stabilization in
+column generation (Part~I, \S\ref{sec:techniques}): cheaper, less-optimal
+probe points trade per-iteration cost for iteration count.
+
+\subsection{Axis 2 --- Core improvement (\textsc{ImprCore}, 4 options)}
+
+All four variants take a hitting vector $\vec{h}$ that is a core and grow it
+into a larger core $\vec{k} \ge \vec{h}$ by incrementing components while
+preserving the core condition.
+
+\begin{itemize}
+\item \textbf{Maximal cores.} Strongest and most expensive: keep incrementing
+until no further component can be increased without breaking the core
+condition. Analogous to destructive MUS extraction. Produces cores that
+dominate the largest set of goal cores per call.
+
+\item \textbf{Lazy cores.} Weakest and cheapest: no explicit improvement. The
+assumption-based SAT solver already returns a core that is implicitly
+improved at no extra cost.
+
+\item \textbf{Cost-bounded cores.} Intermediate: improve $\vec{h}$ until its
+cost reaches $\mathit{ub}$. If $\mathit{ub} > w^\star$, the resulting core
+contributes to dominating goal cores; otherwise the improvement is wasted.
+
+\item \textbf{Partially maximal cores.} Soften maximality to require only that
+the increment of \emph{some} single component produces a solution vector
+(rather than every component). Used in earlier work~\citep{moreno2013implicit}.
+\end{itemize}
+
+Across all four variants the implementation prefers, at each candidate step,
+the component with the lowest value~$v_i$: having $\mathcal{K}$ cores whose
+minimum value is as large as possible makes them more costly to hit,
+accelerating the lower bound.
+
+The maximal-cores option is the analog of Pareto-optimal core selection in
+Part~I (\S\ref{sec:techniques}, \citet{magnanti1981accelerating}): both
+strengthen the cuts/columns generated per oracle call at a higher
+per-iteration price.
+
+\subsection{Axis 3 --- Cost-function merging (with vs.\ without)}
+
+A preprocessing step (see~\citet{petrova2025empirical} and references therein)
+heuristically clusters cost functions along a tree decomposition and
+``virtually'' merges each cluster into a single cost function with extended
+domain. This shrinks the dimensionality of the cost-vector space and is shown
+empirically to be the single most impactful design choice.
+
+\subsection{Implementation choices}
+
+\begin{itemize}
+\item \textsc{MinCostHV} and \textsc{CostBoundedHV} are modelled as 0/1 IPs
+and solved with \emph{CPLEX}.
+\item Induced CSPs are encoded as CNF and solved with the assumption-based
+SAT solver \emph{CaDiCaL}; this is what makes ``lazy cores'' free.
+\item All instances are pre-processed and made \emph{virtually arc consistent}
+(VAC) before solving.
+\item Some iterations are allowed to extract \emph{disjunctive cores} (cores
+covering multiple branches simultaneously), as in~\citet{allouche2015anytime}.
+\item Time limit: 1 hour per instance.
+\end{itemize}
+
+%----------------------------------------------------------------------
+\section{Empirical landscape (high-level)}
+\label{sec:wcspresults}
+%----------------------------------------------------------------------
+
+The benchmark suite (12 classes) spans uniform random, scale-free random, and
+structured problems (EHI, SPOT5, driverlog, Grid, Normalized, Pedigree,
+CELAR), with up to a few thousand variables and cost functions per instance.
+
+\paragraph{Cost-function merging is dominant.} Speed-ups range from $1.3\times$
+(Normalized) to $268\times$ (random domains) with only the Grid class harmed
+by merging---suggesting the tree-decomposition heuristic is unsuited to
+its regular structure.
+
+\paragraph{No algorithm uniformly dominates.} Different benchmark classes
+prefer dramatically different combinations, with ratios up to several orders
+of magnitude between the best and the worst configuration on the same
+benchmark. The authors warn against concluding that IHS ``is not suitable''
+for any particular benchmark class without trying multiple combinations.
+
+\paragraph{Maximal cores are the most common best option.} For $10$ of $12$
+benchmark classes maximal cores produce the best running time. Pedigree and
+random-domains are the exceptions: there the induced CSPs are SAT-hard
+enough that the cheaper lazy cores pay off.
+
+\paragraph{The intermediate options are never the best for core improvement.}
+Cost-bounded cores turn out to be empirically close to lazy cores (the
+assumption-based SAT solver already provides cores whose cost reaches
+$\mathit{ub}$); partially maximal cores tend to be too weak. Only the two
+extremes (maximal or lazy) ever win.
+
+\paragraph{Greedy hitting vectors rarely pay off.} Except in the very early
+iterations, greedy variants produce cheap-but-useless iterations and end up
+converging to their exact counterpart; better heuristics could plausibly
+change this picture.
+
+\paragraph{Competitiveness with the state-of-the-art.} Compared with
+Toulbar2 (the leading WCSP solver), IHS still trails on most random
+benchmarks but is competitive---and outperforms Toulbar2---on benchmarks with
+small domains and few distinct costs (EHI, SPOT5, Grid, Normalized,
+Pedigree). These two structural features (small domains, few distinct
+costs) appear to be the most reliable proxy for IHS suitability.
+
+%----------------------------------------------------------------------
+\section{Connection to Parts~I and~II}
+\label{sec:wcspconnect}
+%----------------------------------------------------------------------
+
+The two design axes Petrova et~al.\ vary line up cleanly with the OR-derived
+techniques framed in Part~I (\S\ref{sec:techniques}).
+
+\begin{itemize}
+\item \textbf{Axis 1 (hitting-vector relaxation) $\leftrightarrow$
+in-out separation / cost-bounded probing.} The paper's \textsc{CostBoundedHV}
+and greedy options are concrete realizations of the idea that the master
+need not be solved to optimality at every iteration; the same observation
+underlies in-out separation in column generation~\citep{benameur2007stabilization}.
+
+\item \textbf{Axis 2 (core improvement) $\leftrightarrow$ Pareto-optimal
+core selection.} The maximal-cores option of Petrova et~al.\ is the
+non-fractional analog of the Magnanti--Wong dominance criterion: both
+strengthen the cuts/columns produced per oracle call.
+
+\item \textbf{Axis 3 (cost-function merging) $\leftrightarrow$ Dantzig--Wolfe
+preprocessing.} Tree-decomposition-based merging compresses the
+constraint structure before the IHS loop, in the spirit of OR
+preprocessing techniques (e.g.\ aggregation in column generation) that
+reduce master dimension prior to solving.
+\end{itemize}
+
+Two features of the paper depart from the Parts~I--II framing. First, the
+paper does not consider an \emph{LP-relaxation} view of the hitting-vector
+subproblem, hence none of its variants exploit fractional dual prices
+$\bar{y}$; the price-aware extraction and Wentges stabilization techniques
+of Part~I are therefore complementary rather than overlapping. Second, the
+paper does \emph{not} consider warm-starting from a complementary algorithm
+(e.g.\ Toulbar2's incremental lower bound, or a short core-guided phase);
+cross-family warm-starting (Part~I, \S\ref{sec:techniques}) is an
+unexplored direction.
+
+The empirical evidence on the cost-function merging axis is also a
+cautionary note for theoretical analyses that treat the cost-function
+collection as fixed: merging changes the effective dimensionality of the
+hitting-vector space, which Parts~I--II do not model and which dominates
+solver performance.
+
+\paragraph{Summary.} Parts~I--II provide a structural reason to expect that
+relaxed hitting-vector subproblems and stronger cores both help; the empirical
+study of~\citet{petrova2025empirical} confirms the latter (maximal cores) and
+qualifies the former (cost-bounded helps mainly via assumption-based SAT,
+greedy heuristics need better design). The complementarity is clean: the OR
+framing identifies the design axes worth varying, and the empirical study
+populates them with measured trade-offs.
+
+

@@ -1,6 +1,16 @@
 
-all : maxsat_decomposition_report.pdf ihs_dantzig_wolfe_example.pdf
+PARTS = part1.tex part2.tex part3.tex
+BIB   = refs.bib
 
-%.pdf : %.tex
-	pdflatex $<
+all : memo.pdf
 
+memo.pdf : memo.tex $(PARTS) $(BIB)
+	pdflatex memo.tex
+	bibtex memo
+	pdflatex memo.tex
+	pdflatex memo.tex
+
+clean :
+	rm -f memo.aux memo.log memo.out memo.toc memo.bbl memo.blg memo.pdf
+
+.PHONY : all clean
