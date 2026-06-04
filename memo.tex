@@ -2,28 +2,39 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{microtype}
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{booktabs}
-\usepackage{hyperref}
 \usepackage[margin=2.5cm]{geometry}
-\usepackage{natbib}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{natbib}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=blue,
+  urlcolor=blue,
+  pdftitle={Implicit Hitting Set Methods for MaxSAT and WCSP},
+  pdfauthor={Jordi Planes},
+  pdfsubject={MaxSAT, WCSP, IHS, Dantzig-Wolfe, Benders decomposition}
+}
+\usepackage[capitalize,noabbrev]{cleveref}
 
-\newtheorem{theorem}{Theorem}
-\newtheorem{lemma}{Lemma}
-\newtheorem{proposition}{Proposition}
-\newtheorem{corollary}{Corollary}
-\newtheorem{definition}{Definition}
-\newtheorem{remark}{Remark}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
 
 \title{Implicit Hitting Set Methods for MaxSAT and WCSP:\\
-       Decomposition View, Equivalence Analysis, and Empirical Landscape\\[1ex]
-       \large Combined Memo}
+       Decomposition View, Equivalence Analysis,\\
+       and Empirical Landscape}
 
-\author{Technical Memo}
+\author{Jordi Planes}
 
 \date{June 2026}
 
@@ -31,13 +42,113 @@
 
 \maketitle
 
+\begin{abstract}
+This memo combines three notes on Implicit Hitting Set (IHS) methods for
+MaxSAT and Weighted CSP. Part~1 frames the algorithmic landscape:
+core-guided MaxSAT as a Logic-Based Benders Decomposition, and IHS as
+Dantzig--Wolfe column generation on the dual core-packing LP, separating
+structural features that transfer from those that do not. Part~2 sharpens
+this claim with a worked example showing exact equivalence at the LP level,
+and a three-clause counterexample showing that the integer master used by
+practical solvers is strictly stronger than Dantzig--Wolfe; the gap is
+exactly the integrality gap of the hitting-set polytope. Part~3 reads the
+empirical study of \citet{petrova2025empirical} of 32 IHS configurations for
+weighted CSPs through the same OR lens, confirming the qualitative
+predictions of Parts~1--2 while reordering the relative importance of the
+design axes.
+\end{abstract}
+
 \tableofcontents
+\listofalgorithms
+
+%======================================================================
+\section{Overview and Roadmap}
+\label{sec:overview}
+%======================================================================
+
+This memo collects three short technical notes. Each can be read
+independently, but they were drafted to be read in sequence: the first
+frames IHS structurally, the second tests how far the framing carries, and
+the third connects it to empirical practice.
+
+\begin{itemize}
+\item \cref{sec:part1} develops the decomposition view. After reviewing the
+core-guided and IHS algorithm families and the LBBD and Dantzig--Wolfe
+templates, it identifies the row--column duality between cores and cuts,
+gives a small worked example, and closes with a catalog of OR techniques
+whose transfer to MaxSAT is supported by the analogy.
+
+\item \cref{sec:part2} isolates a single claim from \cref{sec:part1}---``IHS
+is Dantzig--Wolfe on the dual packing LP''---and asks whether it is literally
+true. The answer is yes for an LP master (the $P_4$ example and the exact
+equivalence proposition), and no for the integer master used in practice
+(the $K_3$ counterexample). The verdict locates the equivalence at the
+integrality gap of the hitting-set polytope.
+
+\item \cref{sec:part3} reads the empirical study of
+\citet{petrova2025empirical} on IHS for weighted CSPs through the lens of
+\cref{sec:part1,sec:part2}, mapping their two design axes onto the in-out
+separation and Pareto-cut selection techniques predicted by the
+decomposition framing.
+\end{itemize}
+
+Readers familiar with the core/correction-set duality and with column
+generation may skip directly to \cref{sec:part2}; readers interested only in
+solver design choices may skip directly to \cref{sec:part3}.
 
 \input{part1}
 
 \input{part2}
 
 \input{part3}
+
+%======================================================================
+\section{Closing Synthesis}
+\label{sec:closing}
+%======================================================================
+
+Three observations summarize the memo.
+
+\paragraph{The structural mapping is sound but conditional.} The pairings
+core-guided $\leftrightarrow$ LBBD and IHS $\leftrightarrow$ Dantzig--Wolfe
+developed in \cref{sec:part1} are correct at the level of LP duality between
+primal cuts and dual columns and at the level of oracle soundness. They
+break at the level of complexity (pricing is NP-complete, not polynomial),
+master tractability (the practical master is integer), and primal geometry
+(cores are not extreme points of a fixed polytope). Techniques whose
+correctness depends only on the row--column duality should transfer;
+techniques that rely on polynomial pricing or on LP master geometry should
+not be expected to transfer without adaptation.
+
+\paragraph{The integer master is exactly where IHS leaves Dantzig--Wolfe
+behind.} \Cref{sec:part2} makes this precise: IHS with an LP master is
+literally column generation on the dual packing LP, while the IHS used by
+real solvers solves the master as an integer program and is strictly
+stronger. The difference is the integrality gap of the hitting-set
+polytope---vanishing on bipartite-conflict instances (the $P_4$ trace),
+positive on odd-cycle instances (the $K_3$ counterexample, where DW
+terminates at $3/2$ and IHS at the true optimum $2$).
+
+\paragraph{Empirics confirm the qualitative predictions but reorder
+priorities.} \Citet{petrova2025empirical}, surveyed in \cref{sec:part3},
+find that stronger cores (maximal extraction)---the analog of
+Pareto-optimal cut selection---pay off broadly: maximal cores are the
+best option on $10$ of $12$ benchmark classes. Relaxed hitting-vector
+subproblems (greedy and cost-bounded variants) pay off less than the OR
+analogy alone would predict, and only at the extremes. Cost-function
+merging, a preprocessing axis the framing of \cref{sec:part1,sec:part2}
+does not model, is the single most impactful design choice.
+
+\paragraph{Open directions.} Three concrete avenues stand out. (i) The
+weighted case of the equivalence: the cleanest LP encodings of core-guided
+algorithms~\citep{katsirelos2023analysis} cover only unweighted instances,
+and the weighted analysis is open. (ii) An LP-relaxation view of the WCSP
+hitting-vector subproblem would unlock the dual-stabilization and
+price-aware techniques of \cref{sec:techniques} for the empirical setting
+of \cref{sec:part3}. (iii) Cross-family warm-starting---using a short
+core-guided phase to seed an IHS master, or vice versa---remains untested
+both theoretically and empirically and is the cheapest of the predicted
+hybrid techniques to deploy.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
