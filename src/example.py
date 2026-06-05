@@ -21,8 +21,9 @@ def run(label: str, wcnf_path: str, config: IHSConfig) -> None:
     finally:
         solver.close()
     s = solver.stats
+    lp_val = sum(config.weights[i] * y_lp for i, y_lp in enumerate(solver._last_fractional)) if solver._last_fractional else "N/A"
     print(
-        f"  {label:34s}  cost={cost:>3}  iter={s.iterations:>2}  "
+        f"  {label:34s}  cost={cost:>3}  lp_val={lp_val:>4}  iter={s.iterations:>2}  "
         f"new_cores={s.cores_found:>2}  sat={s.sat_calls:>2}  "
         f"ip={s.ip_solves:>2}  pareto_refs={s.pareto_refinements}"
     )
@@ -34,18 +35,38 @@ def compare(title: str, wcnf_path: str) -> None:
     print(f"{title}  [{wcnf_path}]")
     print("=" * 100)
 
-    seed = harvest_cores(load(wcnf_path), budget=5)
+    wcnf = load(wcnf_path)
+    seed = harvest_cores(wcnf, budget=5)
     print(f"  (warm-start seed harvested {len(seed)} cores)")
 
-    run("Plain IHS (baseline)",        wcnf_path, IHSConfig())
-    run("+ warm-start (Fu-Malik seed)", wcnf_path, IHSConfig(warm_start_cores=seed))
-    run("+ Pareto core selection",     wcnf_path, IHSConfig(pareto_selection=True))
-    run("+ Wentges (α₀=1.0, ρ=0.5)",   wcnf_path, IHSConfig(wentges_alpha0=1.0, wentges_decay=0.5))
-    run("+ in-out separation (λ=0.5)",  wcnf_path, IHSConfig(in_out_lambda=0.5))
-    run("+ price-aware ordering",      wcnf_path, IHSConfig(price_aware_order=True))
-    run(
+    # Pass weights to the print statement
+    class ConfigWithWeights(IHSConfig):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.weights = [int(w) for w in wcnf.wght]
+
+    def run_local(label, cfg):
+        solver = IHSSolver(wcnf, cfg)
+        try:
+            cost, _ = solver.solve()
+        finally:
+            solver.close()
+        s = solver.stats
+        lp_val = sum(solver.weights[i] * y_lp for i, y_lp in enumerate(solver._last_fractional)) if solver._last_fractional else 0.0
+        print(
+            f"  {label:34s}  cost={cost:>4}  lp_val={lp_val:>4.1f}  iter={s.iterations:>2}  "
+            f"new_cores={s.cores_found:>2}  sat={s.sat_calls:>2}  "
+            f"ip={s.ip_solves:>2}  pareto_refs={s.pareto_refinements}"
+        )
+
+    run_local("Plain IHS (baseline)",        IHSConfig())
+    run_local("+ warm-start (Fu-Malik seed)", IHSConfig(warm_start_cores=seed))
+    run_local("+ Pareto core selection",     IHSConfig(pareto_selection=True))
+    run_local("+ Wentges (α₀=1.0, ρ=0.5)",   IHSConfig(wentges_alpha0=1.0, wentges_decay=0.5))
+    run_local("+ in-out separation (λ=0.5)",  IHSConfig(in_out_lambda=0.5))
+    run_local("+ price-aware ordering",      IHSConfig(price_aware_order=True))
+    run_local(
         "+ HYBRID (all techniques)",
-        wcnf_path,
         IHSConfig(
             warm_start_cores=seed,
             pareto_selection=True,
@@ -59,6 +80,7 @@ def compare(title: str, wcnf_path: str) -> None:
 
 def main():
     compare("Worked example (§5): 4 unit soft clauses, optimum 2", "worked.wcnf")
+    compare("Triangle counterexample (§6): K3, LP=1.5, IP=2", "k3.wcnf")
     compare("Weighted chain: 10 soft clauses + hard tie", "weighted_chain.wcnf")
 
 

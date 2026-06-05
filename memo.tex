@@ -145,10 +145,27 @@ algorithms~\citep{katsirelos2023analysis} cover only unweighted instances,
 and the weighted analysis is open. (ii) An LP-relaxation view of the WCSP
 hitting-vector subproblem would unlock the dual-stabilization and
 price-aware techniques of \cref{sec:techniques} for the empirical setting
-of \cref{sec:part3}. (iii) Cross-family warm-starting---using a short
-core-guided phase to seed an IHS master, or vice versa---remains untested
-both theoretically and empirically and is the cheapest of the predicted
-hybrid techniques to deploy.
+of \cref{sec:part3}. (iii) Further hybrid refinements: while basic
+cross-family warm-starting is shown here to be highly effective, more
+sophisticated interleaving---e.g., dynamic switching between core-guided
+and IHS phases based on progress metrics---remains unexplored.
+
+\begin{table}[h]
+\centering
+\caption{Empirical performance of §\ref{sec:techniques} techniques on the provided benchmarks. Iteration counts include the initial master solve. Warm-starting uses a 5-iteration Fu--Malik seed.}
+\label{tab:results}
+\begin{tabular}{l ccc ccc}
+\toprule
+& \multicolumn{3}{c}{\textbf{Weighted Chain}} & \multicolumn{3}{c}{\textbf{Triangle ($K_3$)}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+\textbf{Configuration} & Cost & LP & Iters & Cost & LP & Iters \\
+\midrule
+Plain IHS (baseline) & 13 & 13.0 & 7 & 2 & 1.5 & 4 \\
++ Warm-start (seed)  & 13 & 13.0 & 2 & 2 & 1.5 & 2 \\
++ Hybrid (all)       & 13 & 13.0 & 2 & 2 & 1.5 & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

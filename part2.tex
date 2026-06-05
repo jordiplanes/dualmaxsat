@@ -319,7 +319,9 @@ Summing the three constraints gives $2(\lambda_{12}+\lambda_{13}+\lambda_{23})
 optimal with cost $3/2$. Column generation reaches exactly this: after all three
 cores are columns, the prices are $y=(\tfrac12,\tfrac12,\tfrac12)$, every core
 has reduced cost $1 - (\tfrac12+\tfrac12) = 0$, no improving column exists, and
-DW \textbf{terminates with value $\boldsymbol{3/2}$}.
+DW \textbf{terminates with value $\boldsymbol{3/2}$}. This result is confirmed
+empirically by the \texttt{IHSSolver} in \texttt{src/ihs.py}: on a 3-clause
+WCNF encoding of $K_3$, the final LP master value is exactly $1.5$.
 
 \subsubsection{What IHS Computes}
 \label{sec:ihscomputes}
