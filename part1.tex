@@ -266,7 +266,7 @@ IP. Instead, they transform the formula by adding relaxation variables and
 cardinality constraints. Recent work by \citet{katsirelos2023analysis} has
 shown that these transformations implicitly encode an LP. Specifically:
 
-\begin{proposition}[\citeauthor{katsirelos2023analysis}, 2023]
+\begin{proposition}[Restated from \citet{katsirelos2023analysis}]
 The transformations performed by PMRES and OLL implicitly discover cores of the
 original formula. In unweighted instances, the relaxed formula at each
 iteration encodes a minimum hitting set of these cores. Moreover, the process
@@ -651,16 +651,23 @@ conflict-driven solvers return one based on internal heuristics, not on what
 is most useful to the master. The Benders literature provides a principled
 answer: \citet{magnanti1981accelerating} select, among multiple valid cuts,
 the one that is \emph{non-dominated} (Pareto-optimal) with respect to a
-reference interior point of the master's feasible region.
+reference interior point of the master's feasible region. Strictly, the
+non-dominated cut is selected by an auxiliary optimization over a core point
+of the master's polytope; we adapt the \emph{spirit} of the criterion (prefer
+cuts that bite hardest against the current relaxation) rather than the literal
+Magnanti--Wong procedure.
 
-The MaxSAT analog is concrete. Given an UNSAT call and a current fractional
-hitting set~$\bar{y}$ (the LP relaxation of the master), prefer cores
-$\kappa$ that maximize the violation $1 - \sum_{s_i \in \kappa} \bar{y}_i$.
-Among cores with the same violation, prefer those that are minimal. This
-couples MUS extraction with the master's current state, replacing the SAT
-solver's internal heuristic with a Magnanti--Wong-style criterion. Because
-soundness does not depend on which specific core is returned, this is a pure
-orthogonal improvement and can be layered on top of existing IHS or
+The MaxSAT analog we propose is concrete: given an UNSAT call and a current
+fractional hitting set~$\bar{y}$ (the LP relaxation of the master), prefer
+cores $\kappa$ that maximize the violation
+$1 - \sum_{s_i \in \kappa} \bar{y}_i$. Among cores with the same violation,
+prefer those that are minimal. This couples MUS extraction with the master's
+current state, replacing the SAT solver's internal heuristic with a
+Magnanti--Wong-\emph{style} criterion. The two coincide exactly only under
+specific geometric assumptions on the master polytope, but the looser variant
+already captures the operational benefit: stronger cuts per oracle call.
+Because soundness does not depend on which specific core is returned, this is
+a pure orthogonal improvement and can be layered on top of existing IHS or
 core-guided implementations.
 
 \subsubsection{Dual Stabilization for IHS}
@@ -764,7 +771,11 @@ instances with degenerate hitting-set LPs; Pareto-optimal core selection
 should reduce iteration counts on instances with many redundant cores.
 Systematic experimental study of these predictions---ideally on the MSE
 benchmarks---would be the most direct way to validate (or refute) the
-operational value of the analogy. We are not aware of any such study to date.
+operational value of the analogy. \Cref{sec:part3} reviews
+\citet{petrova2025empirical}, which tests two of these axes (core
+improvement, and a hitting-vector-relaxation axis closely related to in-out
+separation) on a WCSP benchmark suite; we are not aware of a study designed
+to test these predictions \emph{as such} on MaxSAT benchmarks.
 
 \paragraph{The weighted case.} The cleanest LP encodings of core-guided
 algorithms~\citep{katsirelos2023analysis} are for unweighted instances. The

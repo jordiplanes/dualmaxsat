@@ -150,22 +150,96 @@ cross-family warm-starting is shown here to be highly effective, more
 sophisticated interleaving---e.g., dynamic switching between core-guided
 and IHS phases based on progress metrics---remains unexplored.
 
+\paragraph{Empirical illustration.} \Cref{tab:results} reports a small
+illustrative run of the techniques surveyed in \cref{sec:techniques}, produced
+by \texttt{src/example.py} against the prototype \texttt{IHSSolver}
+(\texttt{src/ihs.py}). Three instances are used:
+\begin{itemize}
+\item \textbf{$P_4$ (worked example, \cref{sec:example}):} 4 unit soft clauses
+plus 3 conflict hard clauses; LP and IP optima both $2$.
+\item \textbf{$K_3$ (counterexample, \cref{sec:counter}):} 3 unit soft clauses
+plus pairwise-conflict hard clauses; LP $1.5$, IP $2$.
+\item \textbf{Weighted Chain:} 5 conflicting unit-clause pairs with asymmetric
+weights, one hard tying clause, and one soft clause participating in multiple
+cores ($10$ soft, $12$ hard total); LP and IP optima both $13$. Designed so
+the stabilization techniques have non-trivial structure to act on.
+\end{itemize}
+Each row is one technique from \cref{sec:techniques} layered on the baseline,
+plus a final \textsc{Hybrid} row enabling all of them at once. We report the
+returned cost, the final LP master value, the number of outer iterations,
+SAT-oracle calls, IP-master solves, and Pareto refinements (additional
+in-search SAT calls). The warm-start seed is a 5-iteration core-guided
+(Fu--Malik) phase, harvested via \texttt{coreguided.harvest\_cores}.
+\Cref{tab:results} should be read as a sanity check rather than a benchmark
+study: the instances are tiny and the per-iteration cost is dominated by
+fixed overhead, so the only meaningful columns are correctness (all configs
+return the true optimum) and iteration/SAT-call counts.
+
 \begin{table}[h]
 \centering
-\caption{Empirical performance of §\ref{sec:techniques} techniques on the provided benchmarks. Iteration counts include the initial master solve. Warm-starting uses a 5-iteration Fu--Malik seed.}
+\small
+\caption{Illustrative runs of \cref{sec:techniques} techniques on the three
+toy instances shipped in \texttt{src/wcnf/}. Columns: \textit{Cost} (returned
+optimum), \textit{LP} (final LP-master value), \textit{It} (outer iterations),
+\textit{SAT} (SAT-oracle calls), \textit{IP} (IP-master solves), \textit{Pr}
+(Pareto refinements). Warm-start uses a 5-iteration Fu--Malik seed.}
 \label{tab:results}
-\begin{tabular}{l ccc ccc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l cccccc cccccc cccccc}
 \toprule
-& \multicolumn{3}{c}{\textbf{Weighted Chain}} & \multicolumn{3}{c}{\textbf{Triangle ($K_3$)}} \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7}
-\textbf{Configuration} & Cost & LP & Iters & Cost & LP & Iters \\
+& \multicolumn{6}{c}{\textbf{$P_4$ (worked)}}
+& \multicolumn{6}{c}{\textbf{$K_3$ (counter)}}
+& \multicolumn{6}{c}{\textbf{Weighted Chain}} \\
+\cmidrule(lr){2-7} \cmidrule(lr){8-13} \cmidrule(lr){14-19}
+\textbf{Config.}
+& Cost & LP & It & SAT & IP & Pr
+& Cost & LP & It & SAT & IP & Pr
+& Cost & LP & It & SAT & IP & Pr \\
 \midrule
-Plain IHS (baseline) & 13 & 13.0 & 7 & 2 & 1.5 & 4 \\
-+ Warm-start (seed)  & 13 & 13.0 & 2 & 2 & 1.5 & 2 \\
-+ Hybrid (all)       & 13 & 13.0 & 2 & 2 & 1.5 & 2 \\
+Plain IHS (baseline)         & 2 & 2.0 & 3 & 3 & 3 & 0  & 2 & 1.5 & 4 & 4 & 4 & 0  & 13 & 13.0 & 7 & 7  & 7 & 0 \\
++ Warm-start (Fu--Malik seed)& 2 & 2.0 & 1 & 1 & 1 & 0  & 2 & 1.5 & 2 & 2 & 2 & 0  & 13 & 13.0 & 2 & 2  & 2 & 0 \\
++ Pareto core selection      & 2 & 2.0 & 3 & 4 & 3 & 0  & 2 & 1.5 & 4 & 6 & 4 & 0  & 13 & 13.0 & 7 & 19 & 7 & 0 \\
++ Wentges ($\alpha_0{=}1$, $\rho{=}0.5$)
+                              & 2 & 2.0 & 3 & 3 & 3 & 0  & 2 & 1.5 & 4 & 4 & 4 & 0  & 13 & 13.0 & 7 & 7  & 7 & 0 \\
++ In-out separation ($\lambda{=}0.5$)
+                              & 2 & 2.0 & 3 & 5 & 3 & 0  & 2 & 1.5 & 4 & 7 & 4 & 0  & 13 & 13.0 & 7 & 13 & 7 & 0 \\
++ Price-aware ordering       & 2 & 2.0 & 3 & 3 & 3 & 0  & 2 & 1.5 & 4 & 4 & 4 & 0  & 13 & 13.0 & 7 & 7  & 7 & 0 \\
+\textsc{Hybrid} (all)        & 2 & 2.0 & 1 & 1 & 1 & 0  & 2 & 1.5 & 2 & 4 & 2 & 0  & 13 & 13.0 & 2 & 8  & 2 & 0 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
+
+\paragraph{Reading the table.} Three observations, all weak by design (the
+instances are too small for anything stronger):
+\begin{enumerate}
+\item \textbf{Correctness.} All configurations return $z^\star$ on all three
+instances. In particular, on $K_3$ the IHS-IP master correctly returns
+$z^\star = 2$ even though the LP master value remains $1.5$---the gap predicted
+by \cref{prop:nonequiv}.
+
+\item \textbf{Warm-start dominates iteration count.} On each instance, warm
+starting from a 5-step core-guided phase collapses the outer loop to
+$1$--$2$ iterations: the seeded master already contains enough cores that the
+first SAT call either certifies optimality immediately ($P_4$) or needs one
+more cut ($K_3$, Weighted Chain). This is the cleanest empirical signal in the
+table.
+
+\item \textbf{Stabilization techniques are inactive at this scale.} Wentges and
+price-aware ordering produce numerically identical runs to the baseline, and
+in-out separation and Pareto selection only add SAT calls without changing the
+iteration count or the cores discovered. This is consistent with their
+intended regime---late-phase tailing-off on degenerate masters---which the
+toy instances do not exhibit. The \textsc{Hybrid} row is essentially
+warm-start with additional SAT overhead from in-out and Pareto.
+\end{enumerate}
+
+A meaningful evaluation of the stabilization axis requires instances large
+enough to exhibit master degeneracy and dual oscillation. The MSE benchmarks
+or a structured weighted family (analogous to the Pedigree or SPOT5 classes
+discussed in \cref{sec:part3}) would be the natural next step; \cref{tab:results}
+serves only to confirm that the implementations of \cref{sec:techniques} are
+correct and that warm-starting behaves as predicted.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

@@ -200,39 +200,98 @@ The benchmark suite (12 classes) spans uniform random, scale-free random, and
 structured problems (EHI, SPOT5, driverlog, Grid, Normalized, Pedigree,
 CELAR), with up to a few thousand variables and cost functions per instance.
 
+All quantitative claims below are attributed to \citet{petrova2025empirical};
+specific table/figure pointers are tagged \texttt{[Petrova et al., \dots]} as
+TODOs to fill in against the paper.
+
 \paragraph{Cost-function merging is dominant.} Speed-ups range from $1.3\times$
-(Normalized) to $268\times$ (random domains) with only the Grid class harmed
-by merging---suggesting the tree-decomposition heuristic is unsuited to
-its regular structure.
+(Normalized) to $268\times$ (random domains), with only the Grid class harmed
+by merging---suggesting the tree-decomposition heuristic is unsuited to its
+regular structure. \texttt{[Petrova et al., merging-vs-no-merging table]}
 
 \paragraph{No algorithm uniformly dominates.} Different benchmark classes
 prefer dramatically different combinations, with ratios up to several orders
 of magnitude between the best and the worst configuration on the same
 benchmark. The authors warn against concluding that IHS ``is not suitable''
 for any particular benchmark class without trying multiple combinations.
+\texttt{[Petrova et al., best-vs-worst per class]}
 
 \paragraph{Maximal cores are the most common best option.} For $10$ of $12$
 benchmark classes maximal cores produce the best running time. Pedigree and
-random-domains are the exceptions: there the induced CSPs are SAT-hard
-enough that the cheaper lazy cores pay off.
+random-domains are the exceptions: there the induced CSPs are SAT-hard enough
+that the cheaper lazy cores pay off. \texttt{[Petrova et al., ImprCore-axis
+results]}
 
 \paragraph{The intermediate options are never the best for core improvement.}
 Cost-bounded cores turn out to be empirically close to lazy cores (the
 assumption-based SAT solver already provides cores whose cost reaches
 $\mathit{ub}$); partially maximal cores tend to be too weak. Only the two
-extremes (maximal or lazy) ever win.
+extremes (maximal or lazy) ever win. \texttt{[Petrova et al., same axis as
+above]}
 
 \paragraph{Greedy hitting vectors rarely pay off.} Except in the very early
 iterations, greedy variants produce cheap-but-useless iterations and end up
 converging to their exact counterpart; better heuristics could plausibly
-change this picture.
+change this picture. \texttt{[Petrova et al., HV-axis results]}
 
-\paragraph{Competitiveness with the state-of-the-art.} Compared with
-Toulbar2 (the leading WCSP solver), IHS still trails on most random
-benchmarks but is competitive---and outperforms Toulbar2---on benchmarks with
-small domains and few distinct costs (EHI, SPOT5, Grid, Normalized,
-Pedigree). These two structural features (small domains, few distinct
-costs) appear to be the most reliable proxy for IHS suitability.
+\paragraph{Competitiveness with the state-of-the-art.} Compared with Toulbar2
+(the leading WCSP solver), IHS still trails on most random benchmarks but is
+competitive---and outperforms Toulbar2---on benchmarks with small domains and
+few distinct costs (EHI, SPOT5, Grid, Normalized, Pedigree). These two
+structural features (small domains, few distinct costs) appear to be the most
+reliable proxy for IHS suitability. \texttt{[Petrova et al., Toulbar2
+comparison]}
+
+\paragraph{Per-class summary.} \Cref{tab:wcspclasses} consolidates the
+qualitative picture above into a single grid; each row records, for one of
+the $12$ benchmark classes, the best option on the two design axes, whether
+cost-function merging helps, and how IHS compares with Toulbar2. The entries
+are extracted from the prose claims above; cells marked ``?'' are not
+explicitly resolved in the text and would need to be filled in from the
+paper's per-class tables. The point of the grid is to make the heterogeneity
+visible: the ``best default'' (maximal cores + merging + IP master) is
+genuinely the modal winner, but several classes deviate on at least one axis.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Per-class summary of the empirical findings in
+\citet{petrova2025empirical}, as reported in the prose above. ``Best HV''
+is the winning option on Axis 1 (hitting-vector computation); ``Best
+ImprCore'' is the winning option on Axis 2 (core improvement); ``Merging''
+is whether cost-function merging helps. ``vs Toulbar2'' records whether IHS
+trails ($-$), is competitive ($\approx$), or outperforms ($+$). Cells marked
+``?'' are not resolved in the prose of \cref{sec:wcspresults} and would need
+to be filled in from Petrova et al.'s per-class tables.}
+\label{tab:wcspclasses}
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Class} & \textbf{Best HV} & \textbf{Best ImprCore} & \textbf{Merging?} & \textbf{vs Toulbar2} \\
+\midrule
+Uniform random       & ?            & maximal  & helps      & $-$ \\
+Scale-free random    & ?            & maximal  & helps      & $-$ \\
+Random domains       & ?            & lazy     & helps ($268\times$) & $-$ \\
+EHI                  & ?            & maximal  & helps      & $+$ \\
+SPOT5                & ?            & maximal  & helps      & $+$ \\
+driverlog            & ?            & maximal  & helps      & ? \\
+Grid                 & ?            & maximal  & \textbf{hurts} & $+$ \\
+Normalized           & ?            & maximal  & helps ($1.3\times$) & $+$ \\
+Pedigree             & ?            & lazy     & helps      & $+$ \\
+CELAR                & ?            & maximal  & helps      & ? \\
+\midrule
+\multicolumn{5}{l}{\emph{(Two additional classes from the suite of $12$ are not}} \\
+\multicolumn{5}{l}{\emph{individually named in the prose; fill in from Petrova et al.)}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The dominant pattern (maximal cores + merging) is visible in the table; the
+two systematic exceptions are \emph{random domains} and \emph{Pedigree}
+(both prefer lazy cores) and \emph{Grid} (merging hurts). These three classes
+are the natural targets for a follow-up study of \emph{why} the modal default
+fails---e.g., whether the SAT-hardness of induced CSPs (the explanation
+offered for random/Pedigree) is also what shifts the optimal HV-axis choice
+on those classes.
 
 %----------------------------------------------------------------------
 \subsection{Connection to the Preceding Sections}

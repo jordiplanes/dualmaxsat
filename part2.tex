@@ -101,33 +101,52 @@ core-incidence matrix whose rows are the cores in $\mathcal{K}_t$. The first is
 the restricted primal, the second the restricted dual; (i) is strong LP duality
 and complementary reading of the simplex multipliers. For (ii), the dual
 objective coefficient of $\lambda_\kappa$ is $1$ and its column in $A_t^\top$ is
-the incidence vector of $\kappa$; with prices $y^{(t)}$ the reduced cost (for a
-\emph{maximization}) is $\bar c_\kappa = 1 - \sum_{s_i \in \kappa} y^{(t)}_i$,
-positive exactly when $\kappa$ is under-hit. (iii) is immediate from the
-transpose relationship.
+the incidence vector of $\kappa$. Since the dual is a \emph{maximization}, we
+adopt the standard convention that an entering column is one with
+\emph{strictly positive} reduced cost (objective coefficient minus the
+dual-price contribution). With prices $y^{(t)}$ the reduced cost is
+$\bar c_\kappa = 1 - \sum_{s_i \in \kappa} y^{(t)}_i$, positive exactly when
+$\kappa$ is under-hit. (iii) is immediate from the transpose relationship.
 \end{proof}
 
 \begin{proposition}[IHS-LP is Dantzig--Wolfe on the dual]
 \label{prop:equiv}
 Run IHS-LP and column generation on the dual packing
 LP~\eqref{eq:pack} from the same initial working set, with the SAT oracle as the
-pricing routine. Then at every iteration the two algorithms hold the same
-working set $\mathcal{K}_t$, the same master value $v_t$, and---given a common
-tie-breaking rule for which violated/under-priced core the oracle
-returns---generate the \emph{same} core. Both terminate with value
-$z^\star_{\mathrm{LP}}$.
+pricing routine, and assume:
+\begin{itemize}
+\item[(a)] both runs use a \emph{deterministic} LP solver that, on inputs with
+the same constraint matrix, returns the same basic optimum (so degeneracy is
+broken identically on both sides); and
+\item[(b)] a common tie-breaking rule selects, among multiple violated /
+under-priced cores, the one the oracle returns.
+\end{itemize}
+Then at every iteration the two algorithms hold the same working set
+$\mathcal{K}_t$, the same master value $v_t$, and---given (b)---generate the
+\emph{same} core. Both terminate with value $z^\star_{\mathrm{LP}}$.
 \end{proposition}
 
 \begin{proof}
 Induction on $t$. The master values agree by Lemma~\ref{lem:rowcol}(i). At the
 pricing step, IHS-LP seeks a core violated by $y^{(t)}$; column generation seeks
 a column of positive reduced cost; by Lemma~\ref{lem:rowcol}(ii) these are the
-\emph{same set of candidate cores}, so a shared oracle returns the same
-$\kappa$, and by (iii) the two working sets stay equal. Termination is
+\emph{same set of candidate cores}, so under (b) a shared oracle returns the
+same $\kappa$, and by (iii) the two working sets stay equal. Termination is
 simultaneous: ``no violated core'' $=$ ``no positive-reduced-cost column,'' and
 the common value is the full LP optimum $z^\star_{\mathrm{LP}}$ because all
 violated cores have been priced out.
 \end{proof}
+
+\begin{remark}[Degeneracy]
+\label{rem:degeneracy}
+Hypothesis (a) is genuinely needed: the restricted LP can have multiple optima
+(e.g.\ on $K_3$ after two cores, both $y=(1,0,0)$ and $y=(0,1,0)$ are optimal),
+and two solvers returning different bases will ask the SAT oracle different
+pricing questions and may extract different cores. The master \emph{value}
+still agrees in lockstep---only the trajectory of generated cores can fork.
+This is the same degeneracy that motivates dual-stabilization techniques
+(\S\ref{sec:techniques}, in Part~1).
+\end{remark}
 
 Proposition~\ref{prop:equiv} is the precise, defensible content of the slogan
 ``IHS is Dantzig--Wolfe in the dual.'' Note three things it does \emph{not} say,
@@ -319,9 +338,14 @@ Summing the three constraints gives $2(\lambda_{12}+\lambda_{13}+\lambda_{23})
 optimal with cost $3/2$. Column generation reaches exactly this: after all three
 cores are columns, the prices are $y=(\tfrac12,\tfrac12,\tfrac12)$, every core
 has reduced cost $1 - (\tfrac12+\tfrac12) = 0$, no improving column exists, and
-DW \textbf{terminates with value $\boldsymbol{3/2}$}. This result is confirmed
-empirically by the \texttt{IHSSolver} in \texttt{src/ihs.py}: on a 3-clause
-WCNF encoding of $K_3$, the final LP master value is exactly $1.5$.
+DW \textbf{terminates with value $\boldsymbol{3/2}$}. This is confirmed
+empirically by the prototype \texttt{IHSSolver} in \texttt{src/ihs.py}, which
+implements Algorithm~\ref{alg:ihs} with the master solved both as a 0/1 IP
+(via PuLP/CBC) and as an LP relaxation, calling MiniSat-family assumption
+SAT for the oracle. On the 3-clause WCNF encoding \texttt{src/wcnf/k3.wcnf}
+the IP master returns cost $2$ (matching $z^\star$) while the LP master
+value stabilizes at exactly $1.5$ (matching $z^\star_{\mathrm{LP}}$), so
+both halves of Table~\ref{tab:counter} are observed in a single run.
 
 \subsubsection{What IHS Computes}
 \label{sec:ihscomputes}
@@ -375,6 +399,17 @@ Table~\ref{tab:counter} also records the consistent reading of
 Proposition~\ref{prop:equiv}: IHS-\emph{LP} \emph{does} match DW (both $3/2$);
 it is the \emph{integer} master that creates the discrepancy---and the integer
 master is precisely what makes IHS a correct MaxSAT solver.
+
+\paragraph{Unweighted vs weighted.} The $4/3$ figure above is the
+\emph{unweighted} vertex-cover gap on $K_3$. In the weighted setting the
+analogous gap can be larger: with weights $w = (1,1,M)$ on the three soft
+clauses, the LP optimum is $z^\star_{\mathrm{LP}} = (M+1)/(\ldots)$ while the
+IP optimum remains the cheapest pair, so the gap grows with the weight
+imbalance. The clean ``$4/3$'' constant is therefore tied to the unweighted
+case; the qualitative picture (DW terminates at $z^\star_{\mathrm{LP}}$, IHS-IP
+at $z^\star$) carries over to weighted instances, but the size of the gap is
+instance-dependent. This is the same reason that the weighted analysis of
+core-guided LP encodings remains open (cf.\ \S\ref{sec:future}, Part~1).
 
 %----------------------------------------------------------------------
 \subsection{Reconciliation and Subtleties}
