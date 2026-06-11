@@ -52,7 +52,7 @@ this claim with a worked example showing exact equivalence at the LP level,
 and a three-clause counterexample showing that the integer master used by
 practical solvers is strictly stronger than Dantzig--Wolfe; the gap is
 exactly the integrality gap of the hitting-set polytope. Part~3 reads the
-empirical study of \citet{petrova2025empirical} of 32 IHS configurations for
+32-configuration empirical study of \citet{petrova2025empirical} on IHS for
 weighted CSPs through the same OR lens, confirming the qualitative
 predictions of Parts~1--2 while reordering the relative importance of the
 design axes.
@@ -133,11 +133,13 @@ terminates at $3/2$ and IHS at the true optimum $2$).
 priorities.} \Citet{petrova2025empirical}, surveyed in \cref{sec:part3},
 find that stronger cores (maximal extraction)---the analog of
 Pareto-optimal cut selection---pay off broadly: maximal cores are the
-best option on $10$ of $12$ benchmark classes. Relaxed hitting-vector
-subproblems (greedy and cost-bounded variants) pay off less than the OR
-analogy alone would predict, and only at the extremes. Cost-function
-merging, a preprocessing axis the framing of \cref{sec:part1,sec:part2}
-does not model, is the single most impactful design choice.
+best option on $10$ of $12$ benchmark classes. On the hitting-vector axis no
+option dominates: relaxed subproblems (cost-bounded, and greedy layered on
+cost-bounded) win on $8$ of the $12$ classes, the exact master on the
+remaining $4$, and greedy layered on the exact master never wins.
+Cost-function merging, a preprocessing axis the framing of
+\cref{sec:part1,sec:part2} does not model, is the single most impactful
+design choice.
 
 \paragraph{Open directions.} Three concrete avenues stand out. (i) The
 weighted case of the equivalence: the cleanest LP encodings of core-guided
@@ -146,8 +148,8 @@ and the weighted analysis is open. (ii) An LP-relaxation view of the WCSP
 hitting-vector subproblem would unlock the dual-stabilization and
 price-aware techniques of \cref{sec:techniques} for the empirical setting
 of \cref{sec:part3}. (iii) Further hybrid refinements: while basic
-cross-family warm-starting is shown here to be highly effective, more
-sophisticated interleaving---e.g., dynamic switching between core-guided
+cross-family warm-starting behaves as predicted on the toy instances of
+\cref{tab:results}, more sophisticated interleaving---e.g., dynamic switching between core-guided
 and IHS phases based on progress metrics---remains unexplored.
 
 \paragraph{Empirical illustration.} \Cref{tab:results} reports a small
@@ -155,7 +157,7 @@ illustrative run of the techniques surveyed in \cref{sec:techniques}, produced
 by \texttt{src/example.py} against the prototype \texttt{IHSSolver}
 (\texttt{src/ihs.py}). Three instances are used:
 \begin{itemize}
-\item \textbf{$P_4$ (worked example, \cref{sec:example}):} 4 unit soft clauses
+\item \textbf{$P_4$ (worked example, \cref{sec:worked}):} 4 unit soft clauses
 plus 3 conflict hard clauses; LP and IP optima both $2$.
 \item \textbf{$K_3$ (counterexample, \cref{sec:counter}):} 3 unit soft clauses
 plus pairwise-conflict hard clauses; LP $1.5$, IP $2$.
@@ -166,48 +168,53 @@ the stabilization techniques have non-trivial structure to act on.
 \end{itemize}
 Each row is one technique from \cref{sec:techniques} layered on the baseline,
 plus a final \textsc{Hybrid} row enabling all of them at once. We report the
-returned cost, the final LP master value, the number of outer iterations,
-SAT-oracle calls, IP-master solves, and Pareto refinements (additional
-in-search SAT calls). The warm-start seed is a 5-iteration core-guided
-(Fu--Malik) phase, harvested via \texttt{coreguided.harvest\_cores}.
+number of outer iterations, SAT-oracle calls, IP-master solves, and Pareto
+refinements (additional in-search SAT calls); the returned cost and the
+final LP-master value were identical across all configurations on each
+instance and are reported in the caption. The warm-start seed is a
+5-iteration core-guided (Fu--Malik) phase, harvested via
+\texttt{coreguided.harvest\_cores}.
 \Cref{tab:results} should be read as a sanity check rather than a benchmark
 study: the instances are tiny and the per-iteration cost is dominated by
 fixed overhead, so the only meaningful columns are correctness (all configs
 return the true optimum) and iteration/SAT-call counts.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Illustrative runs of \cref{sec:techniques} techniques on the three
-toy instances shipped in \texttt{src/wcnf/}. Columns: \textit{Cost} (returned
-optimum), \textit{LP} (final LP-master value), \textit{It} (outer iterations),
-\textit{SAT} (SAT-oracle calls), \textit{IP} (IP-master solves), \textit{Pr}
-(Pareto refinements). Warm-start uses a 5-iteration Fu--Malik seed.}
+toy instances shipped in \texttt{src/wcnf/}. Every configuration returned
+the true optimum on every instance (cost $2$, $2$, and $13$ respectively),
+with final LP-master values $2.0$, $1.5$, and $13.0$: on $K_3$ the LP value
+stays at $z^\star_{\mathrm{LP}} = 1.5$ while the IP master returns
+$z^\star = 2$, the gap predicted by \cref{prop:nonequiv}. Columns:
+\textit{It} (outer iterations), \textit{SAT} (SAT-oracle calls), \textit{IP}
+(IP-master solves), \textit{Pr} (Pareto refinements). Warm-start uses a
+5-iteration Fu--Malik seed.}
 \label{tab:results}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{l cccccc cccccc cccccc}
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{l cccc cccc cccc}
 \toprule
-& \multicolumn{6}{c}{\textbf{$P_4$ (worked)}}
-& \multicolumn{6}{c}{\textbf{$K_3$ (counter)}}
-& \multicolumn{6}{c}{\textbf{Weighted Chain}} \\
-\cmidrule(lr){2-7} \cmidrule(lr){8-13} \cmidrule(lr){14-19}
+& \multicolumn{4}{c}{\textbf{$P_4$ (worked)}}
+& \multicolumn{4}{c}{\textbf{$K_3$ (counter)}}
+& \multicolumn{4}{c}{\textbf{Weighted Chain}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
 \textbf{Config.}
-& Cost & LP & It & SAT & IP & Pr
-& Cost & LP & It & SAT & IP & Pr
-& Cost & LP & It & SAT & IP & Pr \\
+& It & SAT & IP & Pr
+& It & SAT & IP & Pr
+& It & SAT & IP & Pr \\
 \midrule
-Plain IHS (baseline)         & 2 & 2.0 & 3 & 3 & 3 & 0  & 2 & 1.5 & 4 & 4 & 4 & 0  & 13 & 13.0 & 7 & 7  & 7 & 0 \\
-+ Warm-start (Fu--Malik seed)& 2 & 2.0 & 1 & 1 & 1 & 0  & 2 & 1.5 & 2 & 2 & 2 & 0  & 13 & 13.0 & 2 & 2  & 2 & 0 \\
-+ Pareto core selection      & 2 & 2.0 & 3 & 4 & 3 & 0  & 2 & 1.5 & 4 & 6 & 4 & 0  & 13 & 13.0 & 7 & 19 & 7 & 0 \\
-+ Wentges ($\alpha_0{=}1$, $\rho{=}0.5$)
-                              & 2 & 2.0 & 3 & 3 & 3 & 0  & 2 & 1.5 & 4 & 4 & 4 & 0  & 13 & 13.0 & 7 & 7  & 7 & 0 \\
+Plain IHS (baseline)         & 3 & 3 & 3 & 0  & 4 & 4 & 4 & 0  & 7 & 7  & 7 & 0 \\
++ Warm-start (Fu--Malik seed)& 1 & 1 & 1 & 0  & 2 & 2 & 2 & 0  & 2 & 2  & 2 & 0 \\
++ Pareto core selection      & 3 & 4 & 3 & 0  & 4 & 6 & 4 & 0  & 7 & 19 & 7 & 0 \\
++ Box penalty ($\alpha_0{=}1$, $\rho{=}0.5$)
+                              & 3 & 3 & 3 & 0  & 4 & 4 & 4 & 0  & 7 & 7  & 7 & 0 \\
 + In-out separation ($\lambda{=}0.5$)
-                              & 2 & 2.0 & 3 & 5 & 3 & 0  & 2 & 1.5 & 4 & 7 & 4 & 0  & 13 & 13.0 & 7 & 13 & 7 & 0 \\
-+ Price-aware ordering       & 2 & 2.0 & 3 & 3 & 3 & 0  & 2 & 1.5 & 4 & 4 & 4 & 0  & 13 & 13.0 & 7 & 7  & 7 & 0 \\
-\textsc{Hybrid} (all)        & 2 & 2.0 & 1 & 1 & 1 & 0  & 2 & 1.5 & 2 & 4 & 2 & 0  & 13 & 13.0 & 2 & 8  & 2 & 0 \\
+                              & 3 & 5 & 3 & 0  & 4 & 7 & 4 & 0  & 7 & 13 & 7 & 0 \\
++ Price-aware ordering       & 3 & 3 & 3 & 0  & 4 & 4 & 4 & 0  & 7 & 7  & 7 & 0 \\
+\textsc{Hybrid} (all)        & 1 & 1 & 1 & 0  & 2 & 4 & 2 & 0  & 2 & 8  & 2 & 0 \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular}
 \end{table}
 
 \paragraph{Reading the table.} Three observations, all weak by design (the
@@ -225,8 +232,9 @@ first SAT call either certifies optimality immediately ($P_4$) or needs one
 more cut ($K_3$, Weighted Chain). This is the cleanest empirical signal in the
 table.
 
-\item \textbf{Stabilization techniques are inactive at this scale.} Wentges and
-price-aware ordering produce numerically identical runs to the baseline, and
+\item \textbf{Stabilization techniques are inactive at this scale.} The
+box-penalty stabilizer and price-aware ordering produce numerically identical
+runs to the baseline, and
 in-out separation and Pareto selection only add SAT calls without changing the
 iteration count or the cores discovered. This is consistent with their
 intended regime---late-phase tailing-off on degenerate masters---which the

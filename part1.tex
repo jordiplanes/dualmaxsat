@@ -18,7 +18,7 @@ clauses (equivalently, minimizing the cost of falsified soft clauses).
 
 Modern exact MaxSAT solvers fall into two broad families:
 \begin{enumerate}
-\item \textbf{Core-guided algorithms} (originating with Fu and Malik~\citep{fu2006solving} and the unsatisfiable-core MSU family of~\citet{marquessilva2008algorithms}; later refinements include PMRES~\citep{narodytska2014maximum} and OLL~\citep{morgado2014core}), which iteratively call a SAT solver, extract unsatisfiable cores, and transform the formula to raise a lower bound.
+\item \textbf{Core-guided algorithms} (originating with Fu and Malik~\citep{fu2006solving} and the unsatisfiable-core MSU family of~\citet{marquessilva2008algorithms}; later refinements include PMRES~\citep{narodytska2014maximum} and OLL~\citep{morgado2014core}; see \citet{morgado2013iterative} for a survey), which iteratively call a SAT solver, extract unsatisfiable cores, and transform the formula to raise a lower bound.
 \item \textbf{Implicit Hitting Set (IHS) algorithms} (e.g., MaxHS~\citep{davies2011solving,davies2013exploiting}), which alternate between a SAT oracle that extracts cores and an IP solver that computes a minimum-cost hitting set of the cores found so far.
 \end{enumerate}
 
@@ -55,14 +55,15 @@ $\kappa \subseteq \mathcal{S}$ with $\mathcal{H} \cup \kappa$ unsatisfiable; a
 $\mathcal{H} \cup (\mathcal{S} \setminus \mathcal{C})$ satisfiable. By the
 hitting-set duality of~\citet{liffiton2008algorithms}, every minimal core hits
 every minimal correction set and vice versa---a fact we will use
-repeatedly.
+repeatedly; \citet{narodytska2022cores} analyze core-guided solving directly
+through this core/correction-set interplay.
 
 \subsubsection{Core-Guided and IHS Algorithms}
 
 The two algorithm families differ in \emph{where} they accumulate information about the instance.
 
 \paragraph{Core-guided algorithms.}
-Core-guided solvers maintain the formula itself as an implicit representation of the lower bound. At each iteration a SAT oracle is called; if it returns unsatisfiable, a core~$\kappa$ is extracted and the formula is syntactically \emph{transformed} so that at least one soft clause in~$\kappa$ must be relaxed, raising the lower bound by the minimum weight in the core. Algorithm~\ref{alg:cg} gives a generic presentation that captures the Fu--Malik algorithm~\citep{fu2006solving}, its MSU-family extensions~\citep{marquessilva2008algorithms}, PMRES~\citep{narodytska2014maximum}, and OLL~\citep{morgado2014core} as instantiations of the \textsc{Relax} step.
+Core-guided solvers maintain the formula itself as an implicit representation of the lower bound. At each iteration a SAT oracle is called; if it returns unsatisfiable, a core~$\kappa$ is extracted and the formula is syntactically \emph{transformed} so that at least one soft clause in~$\kappa$ must be relaxed, raising the lower bound by the minimum weight in the core. \cref{alg:cg} gives a generic presentation that captures the Fu--Malik algorithm~\citep{fu2006solving}, its MSU-family extensions~\citep{marquessilva2008algorithms}, PMRES~\citep{narodytska2014maximum}, and OLL~\citep{morgado2014core} as instantiations of the \textsc{Relax} step.
 
 \begin{algorithm}[t]
 \caption{Generic Core-Guided MaxSAT}
@@ -85,10 +86,10 @@ Core-guided solvers maintain the formula itself as an implicit representation of
 \end{algorithmic}
 \end{algorithm}
 
-The \textsc{Relax} step introduces a fresh relaxation variable~$r_s$ for each $s \in \kappa$, weakening each clause from~$s$ to $s \vee r_s$, and adds a \emph{cardinality constraint} $\sum_{s \in \kappa} r_s \geq 1$ (or a soft version thereof weighted~$\delta$). Weights exceeding $\delta$ give rise to residual copies of the clause with weight $w'(s) - \delta$. Different choices of cardinality encoding yield the different named algorithms; the common invariant is that $\mathit{lb}$ is a valid lower bound on the optimal cost after every iteration.
+The \textsc{Relax} step introduces a fresh relaxation variable~$r_s$ for each $s \in \kappa$, weakening each clause from~$s$ to $s \vee r_s$, and adds a \emph{hard} cardinality constraint $\sum_{s \in \kappa} r_s \leq 1$ (in Fu--Malik, an exactly-one constraint). The \emph{at-most-one} direction is what makes the bookkeeping exact: it ensures each relaxation round forgives at most one falsified clause of~$\kappa$, so the optimum of the transformed instance drops by exactly~$\delta$ and the invariant $\mathit{OPT} = \mathit{lb} + \mathit{OPT}(\text{transformed})$ is preserved. The converse direction $\sum_{s \in \kappa} r_s \geq 1$ is just the hitting-set row: it is implied by the unsatisfiability of $\mathcal{H} \cup \kappa$ and may be added as a redundant clause, but it cannot \emph{replace} the at-most-one constraint. With only $\geq 1$, a model may set several $r_s$ at once and falsify several soft clauses for the price of one~$\delta$: on $\mathcal{S} = \{a,\, b,\, \neg a,\, \neg b\}$, $\mathcal{H} = \{\neg a \vee \neg b\}$ with unit weights (optimum~$2$), relaxing the core $\{a, b\}$ with only $r_1 + r_2 \geq 1$ lets the next SAT call succeed with $a = b = \mathit{false}$, $r_1 = r_2 = 1$, terminating with $\mathit{lb} = 1 < \mathit{OPT}$. Weights exceeding $\delta$ give rise to residual copies of the clause with weight $w'(s) - \delta$. Different choices of relaxation and cardinality encoding yield the different named algorithms (OLL, for instance, introduces \emph{soft} cardinality constraints over the relaxation variables whose bounds are raised when they reappear in later cores); the common invariant is that $\mathit{lb}$ is a valid lower bound on the optimal cost after every iteration, and the at-most-one discipline is what entitles the algorithm to return $\mathit{lb}$ as the optimum upon a satisfiable call.
 
 \paragraph{Implicit Hitting Set algorithms.}
-IHS solvers~\citep{davies2011solving,davies2013exploiting} separate the two responsibilities cleanly: an IP solver maintains an explicit \emph{master problem} that optimizes over the cores found so far, while the SAT oracle is used only to validate or refute the current candidate solution. Algorithm~\ref{alg:ihs} describes the MaxHS solver.
+IHS solvers~\citep{davies2011solving,davies2013exploiting} separate the two responsibilities cleanly: an IP solver maintains an explicit \emph{master problem} that optimizes over the cores found so far, while the SAT oracle is used only to validate or refute the current candidate solution. \cref{alg:ihs} describes the MaxHS solver.
 
 \begin{algorithm}[t]
 \caption{Implicit Hitting Set MaxSAT (MaxHS)}
@@ -111,7 +112,7 @@ IHS solvers~\citep{davies2011solving,davies2013exploiting} separate the two resp
 \end{algorithmic}
 \end{algorithm}
 
-At termination of Algorithm~\ref{alg:ihs}, the optimal cost equals $\sum_{s \in H^*} w(s)$ because (i)~$H^*$ is a minimum hitting set of all known cores, giving a lower bound, and (ii)~the SAT oracle confirms that $\mathcal{S} \setminus H^*$ is satisfiable together with $\mathcal{H}$, so $H^*$ is an achievable correction set and hence an upper bound. The lower and upper bounds coincide, certifying optimality.
+At termination of \cref{alg:ihs}, the optimal cost equals $\sum_{s \in H^*} w(s)$ because (i)~$H^*$ is a minimum hitting set of all known cores, giving a lower bound, and (ii)~the SAT oracle confirms that $\mathcal{S} \setminus H^*$ is satisfiable together with $\mathcal{H}$, so $H^*$ is an achievable correction set and hence an upper bound. The lower and upper bounds coincide, certifying optimality.
 
 \subsubsection{The LP Relaxation of MaxSAT}
 
@@ -137,7 +138,7 @@ dual. \emph{Logic-Based Benders Decomposition} (LBBD)~\citep{hooker2003logic}
 generalizes this: the subproblem can be any optimization or feasibility
 problem, and cuts are derived from any sound \emph{inference dual}---a proof
 of infeasibility or suboptimality---rather than from LP duality alone.
-Algorithm~\ref{alg:benders} gives the LBBD template.
+\cref{alg:benders} gives the LBBD template.
 
 \begin{algorithm}[t]
 \caption{Logic-Based Benders Decomposition (LBBD)}
@@ -175,7 +176,7 @@ an LP with complicating \emph{constraints} by representing the tractable
 polyhedron $\mathcal{P} = \{x : Dx \leq d,\; x \geq 0\}$ via its extreme
 points. A \emph{restricted master} works with a subset of these points
 (columns), and a \emph{pricing subproblem} searches for one of negative reduced
-cost. Algorithm~\ref{alg:dw} gives the column generation procedure.
+cost. \cref{alg:dw} gives the column generation procedure.
 
 \begin{algorithm}[t]
 \caption{Dantzig--Wolfe Decomposition (Column Generation)}
@@ -353,18 +354,24 @@ New constraint (row) & New core $\kappa_{k+1}$ \\
 \end{tabular}
 \end{center}
 
-\begin{proposition}
-The IHS algorithm is a primal-side implementation of column generation on
-the dual of the MaxSAT hitting set LP. Each new core discovered by the SAT
-oracle acts simultaneously as:
+\begin{proposition}[Informal; made precise in \cref{sec:part2}]
+\label[proposition]{prop:ihsdw-informal}
+The IHS algorithm with an \emph{LP master} is a primal-side implementation of
+column generation on the dual of the MaxSAT hitting set LP. Each new core
+discovered by the SAT oracle acts simultaneously as:
 \begin{enumerate}
 \item a new \emph{row} (constraint) in the primal hitting set master, and
 \item a new \emph{column} (variable) in the dual packing master.
 \end{enumerate}
 By LP duality, adding a row to the primal is equivalent to adding a column to
-the dual. Hence the IHS algorithm is a Dantzig--Wolfe procedure on the dual
-formulation.
+the dual. Hence IHS with an LP master is a Dantzig--Wolfe procedure on the
+dual formulation.
 \end{proposition}
+
+The LP-master qualifier is not cosmetic: \cref{sec:part2} proves the
+equivalence for the LP master (\cref{prop:equiv}) and shows that the
+\emph{integer} master used by practical solvers is strictly stronger than
+Dantzig--Wolfe (\cref{prop:nonequiv}).
 
 \begin{figure}[t]
 \centering
@@ -500,22 +507,22 @@ dual packing LP is
 \]
 with optimum $\lambda_1 = \lambda_2 = 1$, value~$2$.
 
-\paragraph{Trace of core-guided (Algorithm~\ref{alg:cg}).}
+\paragraph{Trace of core-guided (\cref{alg:cg}).}
 \begin{enumerate}
 \item $\textsc{SAT}(\mathcal{H} \cup \mathcal{S}')$ on the four units:
 \textbf{UNSAT}. Return core $\kappa_1 = \{s_1, s_2\}$. Set
 $\delta = 1$, $\mathit{lb} = 1$. \textsc{Relax} weakens
-$s_1 \mapsto a \vee r_1$ and $s_2 \mapsto \neg a \vee r_2$ and adds the soft
-cardinality constraint $r_1 + r_2 \geq 1$ (weight~1).
+$s_1 \mapsto a \vee r_1$ and $s_2 \mapsto \neg a \vee r_2$ and adds the hard
+exactly-one constraint $r_1 + r_2 = 1$.
 \item $\textsc{SAT}$ on the relaxed formula: \textbf{UNSAT}. The new core
 is $\kappa_2 = \{s_3, s_4\}$. Set $\delta = 1$, $\mathit{lb} = 2$. Relax
-$s_3, s_4$ analogously, adding $r_3 + r_4 \geq 1$.
+$s_3, s_4$ analogously, adding $r_3 + r_4 = 1$.
 \item $\textsc{SAT}$: \textbf{SAT}. Set, e.g., $a = \mathit{true}$,
 $b = \mathit{true}$, $r_2 = r_4 = 1$, $r_1 = r_3 = 0$. Return cost
 $\mathit{lb} = 2$.
 \end{enumerate}
 
-\paragraph{Trace of IHS (Algorithm~\ref{alg:ihs}).}
+\paragraph{Trace of IHS (\cref{alg:ihs}).}
 \begin{enumerate}
 \item $\mathcal{K} = \emptyset$. The IP master is unconstrained, so $H^* =
 \emptyset$. $\textsc{SAT}$ on the full formula: \textbf{UNSAT}, core
@@ -531,9 +538,9 @@ $H^* = \{s_1, s_3\}$ (cost~2). $\textsc{SAT}$ on $\{s_2, s_4\}$ = $\neg a
 \paragraph{Side-by-side comparison.} Both algorithms discover exactly the
 same two cores $\{\kappa_1, \kappa_2\}$, in the same order, and terminate with
 the same optimum. What differs is the data structure that accumulates them
-(Table~\ref{tab:trace}):
+(\cref{tab:trace}):
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{The two algorithms accumulate the same information in dual forms.}
 \label{tab:trace}
@@ -542,9 +549,9 @@ the same optimum. What differs is the data structure that accumulates them
 \textbf{Iteration} & \textbf{Core-guided accumulates} & \textbf{IHS accumulates} \\
 \midrule
 1 ($\kappa_1$ found) & relaxation vars $r_1, r_2$;     & primal row $y_1 + y_2 \geq 1$;     \\
-                     & cardinality $r_1 + r_2 \geq 1$  & dual column $\lambda_1$            \\
+                     & exactly-one $r_1 + r_2 = 1$     & dual column $\lambda_1$            \\
 2 ($\kappa_2$ found) & relaxation vars $r_3, r_4$;     & primal row $y_3 + y_4 \geq 1$;     \\
-                     & cardinality $r_3 + r_4 \geq 1$  & dual column $\lambda_2$            \\
+                     & exactly-one $r_3 + r_4 = 1$     & dual column $\lambda_2$            \\
 \midrule
 After 2 iter.\ & $\mathit{lb} = 2$ encoded by         & $H^* \in \{ \{s_1,s_3\}, \{s_1,s_4\}, \{s_2,s_3\}, \{s_2,s_4\} \}$, \\
                & relaxation structure                  & all of cost~2 \\
@@ -552,10 +559,12 @@ After 2 iter.\ & $\mathit{lb} = 2$ encoded by         & $H^* \in \{ \{s_1,s_3\},
 \end{tabular}
 \end{table}
 
-The two cardinality constraints accumulated on the core-guided side are
-exactly the two hitting-set rows on the IHS side---syntactically rewritten on
-the relaxation variables rather than the original $y_i$, but encoding the
-same information. By LP duality, those two rows correspond to two dual
+The at-least-one direction of each exactly-one constraint accumulated on the
+core-guided side is exactly the corresponding hitting-set row on the IHS
+side---syntactically rewritten on the relaxation variables rather than the
+original $y_i$, but encoding the same information (the at-most-one direction
+is the per-iteration accounting device that makes $\mathit{lb}$ exact;
+cf.\ the discussion of \textsc{Relax} in \cref{sec:prelim}). By LP duality, those two rows correspond to two dual
 columns $\lambda_1, \lambda_2$ in the packing LP. After two iterations both
 sides have identified the LP optimum~$\lambda_1 = \lambda_2 = 1 = \mathit{OPT}$,
 one by raising $\mathit{lb}$ through formula transformations (Benders-style),
@@ -570,7 +579,7 @@ the dual).
 The preceding analysis reveals a clean duality diagram connecting the four
 methods:
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     node distance=3cm and 5cm,
@@ -602,8 +611,11 @@ rather than an LP.
 \end{itemize}
 
 This diagram also explains empirically observed complementarities. IHS solvers
-(like Dantzig--Wolfe) tend to produce good primal solutions quickly because
-the master IP yields feasible hitting sets at each iteration. Core-guided
+(like Dantzig--Wolfe) tend to produce good primal solutions quickly: every
+satisfiable oracle call on $\mathcal{S} \setminus H^*$ yields a feasible
+assignment, and hence an upper bound. (The hitting set $H^*$ itself is only a
+candidate---until the SAT call succeeds it certifies a lower bound, not an
+upper one.) Core-guided
 solvers (like Benders) tend to produce strong dual bounds because each core
 directly tightens the relaxation. This mirrors the well-known tradeoff in
 OR between cut-based and column-based approaches.
@@ -613,7 +625,7 @@ OR between cut-based and column-based approaches.
 \label{sec:techniques}
 %----------------------------------------------------------------------
 
-Section~\ref{sec:preserves} identified exactly which structural features carry
+\cref{sec:preserves} identified exactly which structural features carry
 over from Dantzig--Wolfe and Benders to the MaxSAT setting. The useful
 consequence is that techniques whose correctness depends only on row--column
 duality and the soundness of the pricing oracle should transfer essentially
@@ -628,16 +640,16 @@ routinely warm-start Benders or Dantzig--Wolfe masters with cuts or columns
 from a heuristic phase.
 
 \begin{itemize}
-\item \emph{IHS seeded by core-guided.} Run Algorithm~\ref{alg:cg} for a fixed
+\item \emph{IHS seeded by core-guided.} Run \cref{alg:cg} for a fixed
 iteration budget; harvest all cores it has discovered (whether explicitly
 extracted or implicit in the relaxation structure). Initialize
-Algorithm~\ref{alg:ihs} with $\mathcal{K}$ set to this collection. The first
+\cref{alg:ihs} with $\mathcal{K}$ set to this collection. The first
 IP master solve already returns a non-trivial $H^*$, skipping the cold-start
 phase where IHS has no master structure to exploit.
 \item \emph{Core-guided seeded by IHS or MCS enumeration.} Conversely, a quick
 enumeration of minimal correction sets~\citep{liffiton2008algorithms} yields
 cores by hitting-set duality. Pre-relaxing the formula along these cores gives
-Algorithm~\ref{alg:cg} a head start on the lower bound.
+\cref{alg:cg} a head start on the lower bound.
 \end{itemize}
 
 This requires no algorithmic surgery---only sharing the data structure that
@@ -679,9 +691,11 @@ oscillate between alternative optima, slowing convergence in the late phase
 (``tailing off''). Three OR techniques address this directly.
 
 \paragraph{Wentges-style box stabilization.}
-\citet{wentges1997weighted} adds a penalty term to the master that discourages
-dual prices from drifting too far from a current \emph{stability center}.
-Translated to IHS: maintain a reference fractional hitting set~$\bar{y}$ and
+\citet{wentges1997weighted} stabilizes the master by mixing the dual prices
+used for pricing with a current \emph{stability center}; the closely related
+penalty form we adopt---augmenting the master objective with a box penalty
+that discourages drift from the center---is the stabilized column generation
+of \citet{dumerle1999stabilized}. Translated to IHS: maintain a reference fractional hitting set~$\bar{y}$ and
 replace the master objective $\sum_i w(s_i)\, y_i$ by
 $\sum_i w(s_i)\, y_i + \alpha \|y - \bar{y}\|_1$ for a decaying
 penalty~$\alpha$. The stability center is updated when the SAT oracle
@@ -711,7 +725,7 @@ A more invasive idea draws on Lagrangian relaxation. The dual prices~$\bar{y}$
 from the master's LP relaxation can be interpreted as a measure of how
 ``expensive'' each soft clause is to falsify. Cores composed of high-price
 soft clauses contribute more to tightening the bound (a higher minimum
-weight~$\delta$ in Algorithm~\ref{alg:cg}; a tighter packing constraint in
+weight~$\delta$ in \cref{alg:cg}; a tighter packing constraint in
 the dual~\eqref{eq:dual-pack}). One can therefore bias the SAT oracle's
 search toward such cores---e.g., by reweighting VSIDS scores by current dual
 prices, or by augmenting branching heuristics with the master's dual
@@ -743,12 +757,12 @@ IP master.
 
 \paragraph{Implications for algorithm design.}
 The decomposition viewpoint suggests a portfolio of techniques transferable
-from OR to MaxSAT; these are developed in Section~\ref{sec:techniques}, from
+from OR to MaxSAT; these are developed in \cref{sec:techniques}, from
 the most readily deployable (cross-family warm-starting) to the most
 speculative (price-aware core extraction inside the SAT solver).
 
 \paragraph{Limitations.}
-The analogy is structural, not exact. Section~\ref{sec:preserves} gives the
+The analogy is structural, not exact. \cref{sec:preserves} gives the
 detailed breakdown of what is preserved (row--column duality between cuts and
 cores; soundness of the SAT oracle as a pricing routine) and what is not
 (polynomial pricing, LP master geometry, primal Minkowski decomposition).
@@ -762,7 +776,7 @@ The viewpoint developed here makes several concrete predictions and surfaces
 open questions worth pursuing.
 
 \paragraph{Empirical validation of transferred techniques.} The techniques
-collected in Section~\ref{sec:techniques} are presented on theoretical
+collected in \cref{sec:techniques} are presented on theoretical
 grounds. Each one yields a falsifiable empirical claim: cross-family
 warm-starting should reduce IHS cold-start iterations on benchmark families
 where core-guided is known to find good lower bounds quickly; Wentges-style
@@ -782,12 +796,12 @@ algorithms~\citep{katsirelos2023analysis} are for unweighted instances. The
 weighted case is where most practical interest lies, and where the
 bound-tightening story is more delicate: weight-stratified core extraction,
 weight splitting, and the interaction with $\delta$ in
-Algorithm~\ref{alg:cg} change the structure of the implicit master in ways
+\cref{alg:cg} change the structure of the implicit master in ways
 that the unweighted analysis does not directly cover. Establishing whether the
 Dantzig--Wolfe analogy is exact in the weighted case, or merely heuristic, is
 an open question.
 
-\paragraph{Filling in the square.} Figure~\ref{fig:square} has four corners,
+\paragraph{Filling in the square.} \cref{fig:square} has four corners,
 but OR offers richer machinery built on top of each: \emph{branch-and-price}
 extends Dantzig--Wolfe with branching on master variables; \emph{Benders
 branch-and-cut} interleaves cut generation with branching in a single

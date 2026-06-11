@@ -46,8 +46,9 @@ all $i$; a set of vectors $\mathcal{V}$ \emph{dominates} a vector $\vec{u}$
 if some $\vec{v} \in \mathcal{V}$ has $\vec{v} \le \vec{u}$. A vector that is
 not dominated by a set of cores $\mathcal{K}$ is said to \emph{hit}
 $\mathcal{K}$; the \emph{minimum-cost hitting vector} (MHV) of $\mathcal{K}$ is
-a hitting vector of minimum cost. Computing MHV is NP-hard (it reduces to
-minimum hitting set), so it is the analog of the IHS master.
+a hitting vector of minimum cost. Computing MHV is NP-hard (it generalizes
+minimum hitting set, which is the special case of two-valued cost functions),
+so it is the analog of the IHS master.
 
 Two structural bounds drive the algorithm. For any solution vector $\vec{h}$
 and any set of cores $\mathcal{K} \subseteq \mathit{Cores}$,
@@ -66,7 +67,7 @@ dominates every such goal core and an optimal solution.
 %----------------------------------------------------------------------
 
 The baseline IHS algorithm (\textsc{IHS-lb}) is given in
-Algorithm~\ref{alg:ihs-lb}. It maintains a working core set $\mathcal{K}$ with
+\cref{alg:ihs-lb}. It maintains a working core set $\mathcal{K}$ with
 a lower bound $\mathit{lb}$ and an upper bound $\mathit{ub}$. At each
 iteration it computes an MHV $\vec{h}$ of $\mathcal{K}$ (raising
 $\mathit{lb}$), solves the induced CSP and, if unsatisfiable, calls a routine
@@ -131,7 +132,7 @@ but with fallback to \textsc{CostBoundedHV}.
 
 The intent of relaxing \textsc{MinCostHV} to a cost-bounded or greedy variant
 is the same that motivates in-out separation and dual stabilization in
-column generation (\S\ref{sec:techniques}): cheaper, less-optimal
+column generation (\cref{sec:techniques}): cheaper, less-optimal
 probe points trade per-iteration cost for iteration count.
 
 \subsubsection{Axis 2 --- Core Improvement (\textsc{ImprCore}, 4 Options)}
@@ -165,7 +166,7 @@ minimum value is as large as possible makes them more costly to hit,
 accelerating the lower bound.
 
 The maximal-cores option is the analog of Pareto-optimal core selection in
-\S\ref{sec:techniques} (\citet{magnanti1981accelerating}): both
+\cref{sec:techniques} (\citet{magnanti1981accelerating}): both
 strengthen the cuts/columns generated per oracle call at a higher
 per-iteration price.
 
@@ -196,102 +197,109 @@ covering multiple branches simultaneously), as in~\citet{allouche2015anytime}.
 \label{sec:wcspresults}
 %----------------------------------------------------------------------
 
-The benchmark suite (12 classes) spans uniform random, scale-free random, and
-structured problems (EHI, SPOT5, driverlog, Grid, Normalized, Pedigree,
-CELAR), with up to a few thousand variables and cost functions per instance.
+The benchmark suite (12 classes) comprises three uniform-random families
+(domains, weights, sparse), two scale-free random families
+(scale-free-4/5), and seven structured classes (EHI, SPOT5, driverlog, Grid,
+Normalized, Pedigree, CELAR), with up to ${\sim}9{,}400$ variables and
+${\sim}34{,}000$ constraints per instance (Table~1 of
+\citealp{petrova2025empirical}). All quantitative claims below are from
+\citet{petrova2025empirical}; table numbers refer to that paper.
 
-All quantitative claims below are attributed to \citet{petrova2025empirical};
-specific table/figure pointers are tagged \texttt{[Petrova et al., \dots]} as
-TODOs to fill in against the paper.
-
-\paragraph{Cost-function merging is dominant.} Speed-ups range from $1.3\times$
-(Normalized) to $268\times$ (random domains), with only the Grid class harmed
-by merging---suggesting the tree-decomposition heuristic is unsuited to its
-regular structure. \texttt{[Petrova et al., merging-vs-no-merging table]}
+\paragraph{Cost-function merging is dominant.} Speed-ups range from
+$1.32\times$ (Normalized) to $268\times$ (random domains). Only the Grid
+class is harmed ($0.46\times$): with merging, \emph{none} of the 16 algorithm
+variants solves any Grid instance even under an extended 4-hour limit, so
+Grid results are reported without merging---suggesting the tree-decomposition
+heuristic is unsuited to its regular structure (Table~2).
 
 \paragraph{No algorithm uniformly dominates.} Different benchmark classes
-prefer dramatically different combinations, with ratios up to several orders
-of magnitude between the best and the worst configuration on the same
-benchmark. The authors warn against concluding that IHS ``is not suitable''
-for any particular benchmark class without trying multiple combinations.
-\texttt{[Petrova et al., best-vs-worst per class]}
+prefer dramatically different combinations: even on classes that all 16
+variants solve, the best is at least $4\times$ faster than the worst, and the
+ratio can reach several orders of magnitude (Table~3). The authors warn
+against concluding that IHS ``is not suitable'' for any particular benchmark
+class without trying multiple combinations.
 
 \paragraph{Maximal cores are the most common best option.} For $10$ of $12$
-benchmark classes maximal cores produce the best running time. Pedigree and
-random-domains are the exceptions: there the induced CSPs are SAT-hard enough
-that the cheaper lazy cores pay off. \texttt{[Petrova et al., ImprCore-axis
-results]}
+benchmark classes maximal cores produce the best running time (Table~3).
+Pedigree and random-domains are the exceptions: there the induced CSPs are
+SAT-hard enough that the cheaper lazy cores pay off.
 
 \paragraph{The intermediate options are never the best for core improvement.}
 Cost-bounded cores turn out to be empirically close to lazy cores (the
 assumption-based SAT solver already provides cores whose cost reaches
 $\mathit{ub}$); partially maximal cores tend to be too weak. Only the two
-extremes (maximal or lazy) ever win. \texttt{[Petrova et al., same axis as
-above]}
+extremes (maximal or lazy) ever win (Table~3).
 
-\paragraph{Greedy hitting vectors rarely pay off.} Except in the very early
-iterations, greedy variants produce cheap-but-useless iterations and end up
-converging to their exact counterpart; better heuristics could plausibly
-change this picture. \texttt{[Petrova et al., HV-axis results]}
+\paragraph{The hitting-vector axis is the most benchmark-dependent.} On the
+time axis the winner is IHS-\emph{grdub} on 5 of the 12 classes,
+IHS-\emph{lb} on 4, and IHS-\emph{ub} on 3; IHS-\emph{grdlb} never wins
+(Table~3). Relaxed hitting-vector computations (\emph{ub} or \emph{grdub})
+thus win the majority of classes, but greedy layered on the \emph{exact}
+master never does. Where greedy fails, the diagnosis is that beyond the very
+first iterations greedy steps produce cheap-but-useless iterations and the
+greedy variants converge to their exact counterparts; Petrova et~al.\
+conjecture that more effective (even if costlier) greedy heuristics would
+change this picture.
 
 \paragraph{Competitiveness with the state-of-the-art.} Compared with Toulbar2
-(the leading WCSP solver), IHS still trails on most random benchmarks but is
-competitive---and outperforms Toulbar2---on benchmarks with small domains and
-few distinct costs (EHI, SPOT5, Grid, Normalized, Pedigree). These two
-structural features (small domains, few distinct costs) appear to be the most
-reliable proxy for IHS suitability. \texttt{[Petrova et al., Toulbar2
-comparison]}
+(the leading WCSP solver), IHS trails on all five random classes as well as
+driverlog and CELAR, but outperforms Toulbar2 on EHI, SPOT5, Grid,
+Normalized, and Pedigree (Table~5)---benchmarks with small domains and few
+distinct costs. These two structural features appear to be the most
+reliable proxy for IHS suitability.
 
 \paragraph{Per-class summary.} \Cref{tab:wcspclasses} consolidates the
 qualitative picture above into a single grid; each row records, for one of
-the $12$ benchmark classes, the best option on the two design axes, whether
-cost-function merging helps, and how IHS compares with Toulbar2. The entries
-are extracted from the prose claims above; cells marked ``?'' are not
-explicitly resolved in the text and would need to be filled in from the
-paper's per-class tables. The point of the grid is to make the heterogeneity
-visible: the ``best default'' (maximal cores + merging + IP master) is
-genuinely the modal winner, but several classes deviate on at least one axis.
+the $12$ benchmark classes, the best option on the two design axes (Table~3
+of the paper), the cost-function merging speed-up (Table~2), and how the
+best IHS variant compares with Toulbar2 (Table~5). The point of the grid is
+to make the heterogeneity visible: the ``best default'' (maximal cores +
+merging) is genuinely the modal winner, but several classes deviate on at
+least one axis, and the hitting-vector column has no modal winner at all.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
-\caption{Per-class summary of the empirical findings in
-\citet{petrova2025empirical}, as reported in the prose above. ``Best HV''
-is the winning option on Axis 1 (hitting-vector computation); ``Best
-ImprCore'' is the winning option on Axis 2 (core improvement); ``Merging''
-is whether cost-function merging helps. ``vs Toulbar2'' records whether IHS
-trails ($-$), is competitive ($\approx$), or outperforms ($+$). Cells marked
-``?'' are not resolved in the prose of \cref{sec:wcspresults} and would need
-to be filled in from Petrova et al.'s per-class tables.}
+\caption{Per-class summary of the empirical findings of
+\citet{petrova2025empirical} (their Tables 2, 3, and 5; instance counts in
+parentheses). ``Best HV'' is the winning option on Axis 1 (hitting-vector
+computation); ``Best ImprCore'' is the winning option on Axis 2 (core
+improvement); ``Merging'' is the speed-up from cost-function merging. ``vs
+Toulbar2'' records whether the best IHS variant trails ($-$) or outperforms
+($+$) Toulbar2 on average solving time. On random domains, lazy and
+cost-bounded cores tie for best. Grid results are without merging, since
+with merging no variant solves any Grid instance.}
 \label{tab:wcspclasses}
-\begin{tabular}{l c c c c}
+\begin{tabular}{l c c r c}
 \toprule
-\textbf{Class} & \textbf{Best HV} & \textbf{Best ImprCore} & \textbf{Merging?} & \textbf{vs Toulbar2} \\
+\textbf{Class} & \textbf{Best HV} & \textbf{Best ImprCore} & \textbf{Merging} & \textbf{vs Toulbar2} \\
 \midrule
-Uniform random       & ?            & maximal  & helps      & $-$ \\
-Scale-free random    & ?            & maximal  & helps      & $-$ \\
-Random domains       & ?            & lazy     & helps ($268\times$) & $-$ \\
-EHI                  & ?            & maximal  & helps      & $+$ \\
-SPOT5                & ?            & maximal  & helps      & $+$ \\
-driverlog            & ?            & maximal  & helps      & ? \\
-Grid                 & ?            & maximal  & \textbf{hurts} & $+$ \\
-Normalized           & ?            & maximal  & helps ($1.3\times$) & $+$ \\
-Pedigree             & ?            & lazy     & helps      & $+$ \\
-CELAR                & ?            & maximal  & helps      & ? \\
-\midrule
-\multicolumn{5}{l}{\emph{(Two additional classes from the suite of $12$ are not}} \\
-\multicolumn{5}{l}{\emph{individually named in the prose; fill in from Petrova et al.)}} \\
+Rnd domains (50)      & grdub & lazy    & $268.31\times$ & $-$ \\
+Rnd weights (50)      & lb    & maximal & $2.18\times$   & $-$ \\
+Rnd sparse (50)       & grdub & maximal & $39.33\times$  & $-$ \\
+Rnd scale-free-4 (20) & ub    & maximal & $93.70\times$  & $-$ \\
+Rnd scale-free-5 (20) & grdub & maximal & $12.69\times$  & $-$ \\
+EHI (200)             & ub    & maximal & $99.53\times$  & $+$ \\
+SPOT5 (13)            & lb    & maximal & $156.74\times$ & $+$ \\
+driverlog (23)        & lb    & maximal & $1.61\times$   & $-$ \\
+Grid (5)              & ub    & maximal & \textbf{hurts} ($0.46\times$) & $+$ \\
+Normalized (4)        & grdub & maximal & $1.32\times$   & $+$ \\
+Pedigree (21)         & grdub & lazy    & $1.34\times$   & $+$ \\
+CELAR (9)             & lb    & maximal & $4.85\times$   & $-$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The dominant pattern (maximal cores + merging) is visible in the table; the
-two systematic exceptions are \emph{random domains} and \emph{Pedigree}
+systematic exceptions are \emph{random domains} and \emph{Pedigree}
 (both prefer lazy cores) and \emph{Grid} (merging hurts). These three classes
 are the natural targets for a follow-up study of \emph{why} the modal default
 fails---e.g., whether the SAT-hardness of induced CSPs (the explanation
 offered for random/Pedigree) is also what shifts the optimal HV-axis choice
-on those classes.
+on those classes. Note also that CELAR, the structured class where Toulbar2
+retains the largest lead, has by far the largest domains (up to $44$) and
+cost ranges (up to $137$ distinct costs) in the suite, consistent with the
+small-domains/few-costs suitability proxy.
 
 %----------------------------------------------------------------------
 \subsection{Connection to the Preceding Sections}
@@ -299,7 +307,7 @@ on those classes.
 %----------------------------------------------------------------------
 
 The two design axes Petrova et~al.\ vary line up cleanly with the OR-derived
-techniques framed in Section~\ref{sec:part1} (\S\ref{sec:techniques}).
+techniques framed in \cref{sec:part1} (\cref{sec:techniques}).
 
 \begin{itemize}
 \item \textbf{Axis 1 (hitting-vector relaxation) $\leftrightarrow$
@@ -313,21 +321,21 @@ core selection.} The maximal-cores option of Petrova et~al.\ is the
 non-fractional analog of the Magnanti--Wong dominance criterion: both
 strengthen the cuts/columns produced per oracle call.
 
-\item \textbf{Axis 3 (cost-function merging) $\leftrightarrow$ Dantzig--Wolfe
+\item \textbf{Axis 3 (cost-function merging) $\leftrightarrow$ DW
 preprocessing.} Tree-decomposition-based merging compresses the
-constraint structure before the IHS loop, in the spirit of OR
+constraint structure before the IHS loop runs, in the spirit of the OR
 preprocessing techniques (e.g.\ aggregation in column generation) that
-reduce master dimension prior to solving.
+shrink the master dimension before solving.
 \end{itemize}
 
 Two features of the paper depart from the framing of the preceding sections.
 First, the paper does not consider an \emph{LP-relaxation} view of the
 hitting-vector subproblem, hence none of its variants exploit fractional dual
 prices $\bar{y}$; the price-aware extraction and Wentges stabilization
-techniques of Section~\ref{sec:part1} are therefore complementary rather than
+techniques of \cref{sec:part1} are therefore complementary rather than
 overlapping. Second, the paper does \emph{not} consider warm-starting from a
 complementary algorithm (e.g.\ Toulbar2's incremental lower bound, or a short
-core-guided phase); cross-family warm-starting (\S\ref{sec:techniques}) is an
+core-guided phase); cross-family warm-starting (\cref{sec:techniques}) is an
 unexplored direction.
 
 The empirical evidence on the cost-function merging axis is also a
@@ -338,8 +346,11 @@ dominates solver performance.
 
 \paragraph{Summary.} The preceding sections provide a structural reason to
 expect that relaxed hitting-vector subproblems and stronger cores both help;
-the empirical study of~\citet{petrova2025empirical} confirms the latter
-(maximal cores) and qualifies the former (cost-bounded helps mainly via
-assumption-based SAT, greedy heuristics need better design). The
-complementarity is clean: the OR framing identifies the design axes worth
-varying, and the empirical study populates them with measured trade-offs.
+the empirical study of~\citet{petrova2025empirical} confirms both, with
+qualifications. Stronger cores win broadly (maximal cores best on $10$ of
+$12$ classes); relaxed hitting-vector computations win the majority of
+classes ($8$ of $12$ for \emph{ub}/\emph{grdub}) but no single option
+dominates, and greedy layered on the exact master never wins---greedy
+heuristics need better design. The complementarity is clean: the OR framing
+identifies the design axes worth varying, and the empirical study populates
+them with measured trade-offs.
