@@ -134,7 +134,7 @@ relaxation replaces~\eqref{eq:maxsat-int} with $0 \leq y_i \leq 1$.
 Recall that classical Benders~\citep{benders1962partitioning} fixes
 complicating variables~$\bar{x}$ in the master, solves an LP subproblem
 over~$y$, and derives optimality or feasibility cuts from the subproblem's LP
-dual. \emph{Logic-Based Benders Decomposition} (LBBD)~\citep{hooker2003logic}
+dual. \emph{Logic-Based Benders Decomposition} (LBBD)~\citep{hooker2003logic,hooker2024book}
 generalizes this: the subproblem can be any optimization or feasibility
 problem, and cuts are derived from any sound \emph{inference dual}---a proof
 of infeasibility or suboptimality---rather than from LP duality alone.
@@ -252,7 +252,7 @@ In classical Benders, the cut $\pi^T b \leq z$ is derived from the LP dual of
 the subproblem. In LBBD, the cut comes from any valid proof. In core-guided
 MaxSAT, the SAT solver provides a refutation proof (via conflict-driven clause
 learning) that establishes the unsatisfiability of $\mathcal{H} \cup \kappa$.
-This proof serves as the solution to the inference dual: it certifies that
+This proof serves as the solution to the inference dual~\citep{hooker2006duality}: it certifies that
 \emph{at least one} soft clause in $\kappa$ must be falsified, producing the
 cut
 \[
