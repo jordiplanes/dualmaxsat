@@ -168,6 +168,14 @@ of infeasibility or suboptimality---rather than from LP duality alone.
 The key degree of freedom in LBBD is \textsc{InferenceDual}: when the subproblem
 is an LP, it returns the classical Benders cut from dual multipliers; when the
 subproblem is a SAT call, it returns a combinatorial cut (an unsatisfiable core).
+A second, complementary degree of freedom is how much subproblem structure is
+pushed back into the master: beyond the iteratively generated cuts, one may add
+\emph{valid inequalities} that relax the subproblem in terms of master
+variables, tightening the master before any cut is produced. Recent
+general-purpose LBBD solvers automate this derivation~\citep{rajendran2026subproblem};
+in the core-guided reading developed below the analogous lever is the strength
+of the core extracted by the oracle, and in the IHS reading
+(\cref{sec:dw}) it is the integrality of the master itself.
 
 \subsubsection{Dantzig--Wolfe Decomposition}
 

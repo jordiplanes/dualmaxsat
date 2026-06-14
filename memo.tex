@@ -147,7 +147,9 @@ algorithms~\citep{katsirelos2023analysis} cover only unweighted instances,
 and the weighted analysis is open. (ii) An LP-relaxation view of the WCSP
 hitting-vector subproblem would unlock the dual-stabilization and
 price-aware techniques of \cref{sec:techniques} for the empirical setting
-of \cref{sec:part3}. (iii) Further hybrid refinements: while basic
+of \cref{sec:part3}; the same LP relaxations could also be pushed into the
+master as subproblem-derived valid inequalities, in the spirit of the
+general-purpose LBBD solver of \citet{rajendran2026subproblem}. (iii) Further hybrid refinements: while basic
 cross-family warm-starting behaves as predicted on the toy instances of
 \cref{tab:results}, more sophisticated interleaving---e.g., dynamic switching between core-guided
 and IHS phases based on progress metrics---remains unexplored.
