@@ -159,16 +159,14 @@ $y^{(t)}$ is integral, this is exactly one SAT call on
 $\mathcal{H} \cup (\mathcal{S} \setminus H_t^\star)$---the standard IHS
 oracle---and that is the case throughout the $P_4$ trace of
 \cref{sec:worked}. For genuinely fractional $y^{(t)}$, however, separation
-asks for an unsatisfiable subset of fractional weight below~$1$: a
-weighted-MUS-type optimization that no single SAT call implements. (On $K_3$
-at $y = (\tfrac12,\tfrac12,\tfrac12)$, certifying that no fractionally
-violated core exists is not a satisfiability question about any one clause
-subset.) Thus IHS-LP, unlike IHS-IP, is \emph{not} implementable with the
-unmodified IHS oracle; this is a second, independent sense in which practical
-IHS departs from textbook column generation. Conveniently, the integer master
-of practical IHS guarantees integral prices, which is precisely what lets a
-plain SAT call serve as the separation routine (cf.\ \cref{sec:subtle},
-point~2).
+asks for an unsatisfiable subset of fractional weight below~$1$. This is a
+\emph{weighted-MUS-type optimization} (find $\kappa$ minimizing $\sum_{s_i \in \kappa} y_i^{(t)}$)
+that no single SAT call implements. Thus IHS-LP, unlike IHS-IP, is \emph{not}
+implementable with the unmodified IHS oracle; this is a second, independent
+sense in which practical IHS departs from textbook column generation.
+Conveniently, the integer master of practical IHS guarantees integral prices,
+which is precisely what lets a plain SAT call serve as the separation routine
+(cf.\ \cref{sec:subtle}, point~2).
 \end{remark}
 
 \cref{prop:equiv} is the precise, defensible content of the slogan
@@ -424,20 +422,19 @@ it is the \emph{integer} master that creates the discrepancy---and the integer
 master is precisely what makes IHS a correct MaxSAT solver.
 
 \paragraph{Unweighted vs weighted.} The $4/3$ figure above is the
-\emph{unweighted} vertex-cover gap on $K_3$, and on this conflict graph unit
+\emph{unweighted} vertex-cover gap on $K_3$, and on this conflict graph uniform
 weights are in fact extremal. For weights $w_1 \le w_2 \le w_3$ on the three
 soft clauses, the integer optimum is the cheapest pair, $z^\star = w_1 + w_2$,
 while half-integrality of the vertex-cover LP gives
 $z^\star_{\mathrm{LP}} = \min\{\, w_1 + w_2,\ (w_1 + w_2 + w_3)/2 \,\}$. If
-$w_3 \ge w_1 + w_2$ the LP optimum is integral and the gap closes entirely;
-otherwise the gap is $2(w_1+w_2)/(w_1+w_2+w_3) \le 4/3$, with equality exactly
-at uniform weights (use $w_1 + w_2 \le 2w_3$). Weight imbalance therefore
-\emph{shrinks} the gap on a fixed conflict graph---consistent with the general
-bound of $2$ for weighted vertex cover. The qualitative picture (DW terminates
-at $z^\star_{\mathrm{LP}}$, IHS-IP at $z^\star$) carries over verbatim to
-weighted instances; only the size of the gap is instance-dependent. The
-delicate part of the weighted theory lies elsewhere---in the weighted analysis
-of core-guided LP encodings, which remains open (cf.\ \cref{sec:future}).
+$w_3 \ge w_1 + w_2$, the LP optimum is integral and the gap closes entirely: the
+master solution is then integral and DW coincides with IHS. Otherwise the gap
+is $2(w_1+w_2)/(w_1+w_2+w_3) \in (1, 4/3]$, with the maximum exactly at
+uniform weights. Weight imbalance therefore \emph{shrinks} the gap on a fixed
+conflict graph---consistent with the general bound of $2$ for weighted vertex
+cover. The qualitative picture (DW terminates at $z^\star_{\mathrm{LP}}$, IHS-IP
+at $z^\star$) carries over verbatim to weighted instances; only the size of
+the gap is instance-dependent.
 
 %----------------------------------------------------------------------
 \subsection{Reconciliation and Subtleties}
@@ -454,10 +451,13 @@ $z^\star_{\mathrm{LP}}$, the value of the LP relaxation, which is the
 (\cref{prop:equiv}). But practical IHS solves the restricted master
 as an \emph{integer} program, returning $z^\star \ge z^\star_{\mathrm{LP}}$ and
 closing the integrality gap. This is no longer LP column generation; it is the
-combinatorial analogue of \emph{branch-and-price}, or---read on the primal side
-where the cores are lazily added \emph{rows}---of \emph{Benders / cutting-plane
-generation on an integer master}. The integer master is exactly what lets IHS
-return $2$ rather than $3/2$ on $K_3$.
+combinatorial analogue of \emph{branch-and-price}. In branch-and-price,
+one would branch on $y_i$ whenever the column-generation phase terminates at a
+fractional $z^\star_{\mathrm{LP}}$. IHS-IP effectively performs this "branching"
+implicitly and globally by solving the master as an IP at every iteration,
+collapsing the entire branch-and-bound tree into a sequence of flat master
+solves. The integer master is exactly what lets IHS return $2$ rather than $3/2$
+on $K_3$.
 
 \paragraph{2. Pricing is separation, not optimization.}
 Classical DW pricing solves an \emph{optimization}---$\min_{p\in\mathcal{P}}
@@ -493,6 +493,7 @@ is right: IHS is simultaneously a Benders-style and a DW-style method, the two
 being the same LP object seen from opposite sides. The single caveat the square
 omits is that the practical master is integer, which sits \emph{above} both LP
 methods.
+
 
 %----------------------------------------------------------------------
 \subsection{Verdict}

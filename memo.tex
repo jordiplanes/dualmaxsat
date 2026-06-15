@@ -43,18 +43,19 @@
 \maketitle
 
 \begin{abstract}
-This memo combines three notes on Implicit Hitting Set (IHS) methods for
+This memo combines four notes on Implicit Hitting Set (IHS) methods for
 MaxSAT and Weighted CSP. Part~1 frames the algorithmic landscape:
 core-guided MaxSAT as a Logic-Based Benders Decomposition, and IHS as
 Dantzig--Wolfe column generation on the dual core-packing LP, separating
 structural features that transfer from those that do not. Part~2 sharpens
 this claim with a worked example showing exact equivalence at the LP level,
 and a three-clause counterexample showing that the integer master used by
-practical solvers is strictly stronger than Dantzig--Wolfe; the gap is
-exactly the integrality gap of the hitting-set polytope. Part~3 reads the
+practical solvers is strictly stronger than Dantzig--Wolfe. Part~3 provides
+a broader taxonomy of IHS--OR relationships, mapping the algorithm to
+Lagrangian relaxation, dual ascent, and cutting-plane methods. Part~4 reads the
 32-configuration empirical study of \citet{petrova2025empirical} on IHS for
 weighted CSPs through the same OR lens, confirming the qualitative
-predictions of Parts~1--2 while reordering the relative importance of the
+predictions of Parts~1--3 while reordering the relative importance of the
 design axes.
 \end{abstract}
 
@@ -66,10 +67,11 @@ design axes.
 \label{sec:overview}
 %======================================================================
 
-This memo collects three short technical notes. Each can be read
+This memo collects four short technical notes. Each can be read
 independently, but they were drafted to be read in sequence: the first
-frames IHS structurally, the second tests how far the framing carries, and
-the third connects it to empirical practice.
+frames IHS structurally, the second tests how far the framing carries, the
+third broadens the mapping to other OR paradigms, and the fourth connects
+it to empirical practice.
 
 \begin{itemize}
 \item \cref{sec:part1} develops the decomposition view. After reviewing the
@@ -85,9 +87,15 @@ equivalence proposition), and no for the integer master used in practice
 (the $K_3$ counterexample). The verdict locates the equivalence at the
 integrality gap of the hitting-set polytope.
 
+\item \cref{sec:taxonomy} provides a broader taxonomy of the relationships
+between IHS and OR methods. It interprets IHS as a discrete form of
+Lagrangian relaxation (dual ascent) and a primal cutting-plane method, and
+discusses the dual column-generation view in the space of Maximal
+Satisfiable Subsets (MSSes).
+
 \item \cref{sec:part3} reads the empirical study of
 \citet{petrova2025empirical} on IHS for weighted CSPs through the lens of
-\cref{sec:part1,sec:part2}, mapping their two design axes onto the in-out
+the preceding sections, mapping their two design axes onto the in-out
 separation and Pareto-cut selection techniques predicted by the
 decomposition framing.
 \end{itemize}
@@ -99,6 +107,8 @@ solver design choices may skip directly to \cref{sec:part3}.
 \input{part1}
 
 \input{part2}
+
+\input{part_taxonomy}
 
 \input{part3}
 
@@ -138,18 +148,17 @@ option dominates: relaxed subproblems (cost-bounded, and greedy layered on
 cost-bounded) win on $8$ of the $12$ classes, the exact master on the
 remaining $4$, and greedy layered on the exact master never wins.
 Cost-function merging, a preprocessing axis the framing of
-\cref{sec:part1,sec:part2} does not model, is the single most impactful
-design choice.
+\cref{sec:part1,sec:part2,sec:taxonomy} does not model, is the single most
+impactful design choice.
 
 \paragraph{Open directions.} Three concrete avenues stand out. (i) The
 weighted case of the equivalence: the cleanest LP encodings of core-guided
 algorithms~\citep{katsirelos2023analysis} cover only unweighted instances,
 and the weighted analysis is open. (ii) An LP-relaxation view of the WCSP
-hitting-vector subproblem would unlock the dual-stabilization and
-price-aware techniques of \cref{sec:techniques} for the empirical setting
-of \cref{sec:part3}; the same LP relaxations could also be pushed into the
-master as subproblem-derived valid inequalities, in the spirit of the
-general-purpose LBBD solver of \citet{rajendran2026subproblem}. (iii) Further hybrid refinements: while basic
+hitting-vector subproblem, building on the Lagrangian view of
+\cref{sec:taxonomy}, would unlock the dual-stabilization and price-aware
+techniques of \cref{sec:techniques} for the empirical setting of
+\cref{sec:part3}. (iii) Further hybrid refinements: while basic
 cross-family warm-starting behaves as predicted on the toy instances of
 \cref{tab:results}, more sophisticated interleaving---e.g., dynamic switching between core-guided
 and IHS phases based on progress metrics---remains unexplored.

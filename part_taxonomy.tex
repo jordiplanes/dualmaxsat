@@ -1,0 +1,115 @@
+%======================================================================
+\section{Beyond Branch-and-Price: A Taxonomy of IHS-OR Relationships}
+\label{sec:taxonomy}
+%======================================================================
+
+While the branch-and-price and Benders/Dantzig--Wolfe analogies provide the
+structural foundations for IHS, the algorithm can be viewed through several
+other classical OR lenses. This section maps these relationships, with a focus
+on the Lagrangian interpretation of the hitting-set search.
+
+%----------------------------------------------------------------------
+\subsection{The Lagrangian View: Discrete Dual Ascent}
+\label{sec:lagrangian}
+%----------------------------------------------------------------------
+
+The most conceptual connection to Operations Research is the view of IHS as a
+\textbf{discrete, logic-based form of Lagrangian Relaxation}.
+
+In classical Lagrangian relaxation, one moves ``hard'' constraints into the
+objective function, penalizing their violation with continuous multipliers
+$\lambda$. For MaxSAT, the ``hard'' constraints are the SAT clauses
+$\mathcal{H} \cup \mathcal{S}$. IHS relaxes the requirement to satisfy all soft
+clauses and instead manages the penalties for falsifying them through the
+hitting-set master.
+
+\paragraph{IHS as a Lagrangian Dual solver.}
+If we view the core-packing problem (\cref{eq:pack}) as the dual of the MaxSAT
+relaxation, IHS is effectively solving the \emph{Lagrangian Dual} of the
+hitting-set formulation. Each unsatisfiable core $\kappa$ represents a
+combinatorial violation of the SAT constraints. In a continuous Lagrangian
+setting (like subgradient descent), one would increase the multipliers $\lambda$
+associated with these conflicts to penalize the violation. In IHS, we do not
+adjust continuous multipliers; instead, we add a \emph{discrete hitting-set
+constraint}. This constraint forces the master to ``pay'' for at least one
+clause in the conflict, which is equivalent to a discrete step in a dual-ascent
+process.
+
+\paragraph{Closing the duality gap.}
+A primary challenge in Lagrangian relaxation is the \emph{duality gap}: the
+relaxed bound may never meet the integer optimum. IHS resolves this by
+treating the SAT solver as a conflict generator that provides \emph{all}
+necessary constraints to the dual. Because the hitting-set master is integer
+(\textsc{IHS-IP}), it does not merely ascend to the LP bound $z^\star_{\mathrm{LP}}$
+but continues adding cores until the lower bound meets an achievable upper bound,
+effectively closing the integrality gap through iterative constraint generation.
+
+\paragraph{Reduced costs and variable hardening.}
+Practical solvers like MaxHS leverage this Lagrangian connection through
+\emph{reduced-cost fixing}. By solving the LP relaxation of the current hitting
+set master, the solver obtains dual values $y_i$ and reduced costs $\bar{c}_i$.
+If $z^\star_{\mathrm{LP}} + \bar{c}_i > \mathit{ub}$ (the current best-known upper
+bound), the soft clause $s_i$ \emph{must} be satisfied in any optimal solution.
+This allows the solver to ``harden'' $s_i$ by moving it into $\mathcal{H}$, a
+technique directly imported from the Lagrangian-based pruning used in MIP and
+global optimization.
+
+%----------------------------------------------------------------------
+\subsection{The Cutting-Plane View: SAT as a Separation Oracle}
+\label{sec:cutting}
+%----------------------------------------------------------------------
+
+From a primal perspective, IHS is a pure \textbf{Cutting Plane} algorithm. The
+IP solver maintains a relaxed version of the problem (initially with no cores).
+Each iteration generates a point $H^*$ that is ``optimal'' for the current
+relaxation but ``infeasible'' for the full formula.
+
+The SAT solver acts as the \textbf{Separation Oracle}. Given the current point
+$H^*$, it searches for a linear inequality $\sum_{s_i \in \kappa} y_i \ge 1$
+that is violated by $H^*$ (i.e., a core that is not hit). While classical OR
+cutting planes (like Gomory cuts) are derived from the geometry of the LP
+tableau, IHS cuts are \emph{combinatorial disjunctions} derived from the logical
+structure of the SAT formula.
+
+%----------------------------------------------------------------------
+\subsection{The Dual Perspective: Column Generation in MSS Space}
+\label{sec:mssspace}
+%----------------------------------------------------------------------
+
+The relationship between cores and hitting sets has a polar dual in the space of
+\textbf{Maximal Satisfiable Subsets (MSSes)}. An assignment is optimal if it
+satisfies an MSS of maximum total weight.
+
+By the hitting-set duality of~\citet{liffiton2008algorithms}, a minimum hitting
+set of all cores is equivalent to finding a Maximum Satisfiable Subset. Viewed
+this way, IHS is a **Row Generation** algorithm on the hitting-set formulation.
+Its dual is a **Column Generation** algorithm where each column represents an
+MSS. This mirrors the Dantzig--Wolfe decomposition of Section 2, but where the
+``columns'' are feasible assignments (MSSes) rather than dual variables for
+cores.
+
+%----------------------------------------------------------------------
+\subsection{Summary Taxonomy}
+\label{sec:taxonomy-summary}
+%----------------------------------------------------------------------
+
+\cref{tab:taxonomy} summarizes these multifaceted relationships, providing a
+cross-community dictionary for the IHS approach.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Taxonomy of IHS-OR Relationships.}
+\label{tab:taxonomy}
+\begin{tabular}{lll}
+\toprule
+\textbf{OR Perspective} & \textbf{Role of IHS Component} & \textbf{Key Mechanism} \\
+\midrule
+Logic-Based Benders & Master (IP) vs. Subproblem (SAT) & Logic-based Benders cuts \\
+Cutting Planes      & SAT solver as Separation Oracle  & Combinatorial cuts \\
+Dantzig--Wolfe      & Master as Dual Packing LP        & Column generation (cores) \\
+Lagrangian Dual     & Master as Dual Optimizer         & Discrete dual ascent \\
+Branch-and-Price    & Integer Master + Core Generation & Implicit branching \\
+\bottomrule
+\end{tabular}
+\end{table}
