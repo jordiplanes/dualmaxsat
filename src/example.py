@@ -52,7 +52,7 @@ def compare(title: str, wcnf_path: str) -> None:
         finally:
             solver.close()
         s = solver.stats
-        lp_val = sum(solver.weights[i] * y_lp for i, y_lp in enumerate(solver._last_fractional)) if solver._last_fractional else 0.0
+        lp_val = solver._last_lp_obj if hasattr(solver, '_last_lp_obj') else 0.0
         print(
             f"  {label:34s}  cost={cost:>4}  lp_val={lp_val:>4.1f}  iter={s.iterations:>2}  "
             f"new_cores={s.cores_found:>2}  sat={s.sat_calls:>2}  "
@@ -65,6 +65,8 @@ def compare(title: str, wcnf_path: str) -> None:
     run_local("+ Wentges (α₀=1.0, ρ=0.5)",   IHSConfig(wentges_alpha0=1.0, wentges_decay=0.5))
     run_local("+ in-out separation (λ=0.5)",  IHSConfig(in_out_lambda=0.5))
     run_local("+ price-aware ordering",      IHSConfig(price_aware_order=True))
+    run_local("+ Multi-core extraction",     IHSConfig(multi_core=True))
+    run_local("+ Reduced cost fixing",       IHSConfig(reduced_cost_fixing=True))
     run_local(
         "+ HYBRID (all techniques)",
         IHSConfig(
@@ -74,6 +76,8 @@ def compare(title: str, wcnf_path: str) -> None:
             wentges_decay=0.5,
             in_out_lambda=0.5,
             price_aware_order=True,
+            multi_core=True,
+            reduced_cost_fixing=True,
         ),
     )
 

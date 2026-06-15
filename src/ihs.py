@@ -31,6 +31,8 @@ class IHSConfig:
     wentges_decay: float = 0.5
     in_out_lambda: float = 0.0
     price_aware_order: bool = False
+    multi_core: bool = False
+    reduced_cost_fixing: bool = False
     max_iters: int = 1000
 
 
@@ -105,18 +107,23 @@ class IHSSolver:
 
         # Solve the LP relaxation too — used for Pareto selection and price-aware
         # ordering. We do this with the unstabilized objective for clean prices.
-        self._last_fractional = self._solve_master_lp()
+        self._last_fractional_vals, self._last_djs, self._last_lp_obj = self._solve_master_lp()
 
         return H_star
 
-    def _solve_master_lp(self) -> list[float]:
+    def _solve_master_lp(self) -> tuple[list[float], list[float], float]:
+        """Solve the LP relaxation and return (values, reduced_costs, objective)."""
         prob = pulp.LpProblem("ihs_master_lp", pulp.LpMinimize)
         y = [pulp.LpVariable(f"y_{i}", lowBound=0, upBound=1) for i in range(self.n_soft)]
         prob += pulp.lpSum(self.weights[i] * y[i] for i in range(self.n_soft))
         for core in self.cores:
             prob += pulp.lpSum(y[i] for i in core) >= 1
         prob.solve(pulp.PULP_CBC_CMD(msg=0))
-        return [y[i].varValue or 0.0 for i in range(self.n_soft)]
+        
+        vals = [y[i].varValue or 0.0 for i in range(self.n_soft)]
+        djs = [y[i].dj or 0.0 for i in range(self.n_soft)]
+        obj = pulp.value(prob.objective)
+        return vals, djs, obj
 
     # -------------------------------------------------------------- probe set
 
@@ -137,10 +144,10 @@ class IHSSolver:
         """Selectors for enforced clauses; price-aware order if requested."""
         enforced = [i for i in range(self.n_soft) if i not in dropped]
 
-        if self.config.price_aware_order and self._last_fractional is not None:
+        if self.config.price_aware_order and hasattr(self, '_last_fractional_vals'):
             # Put high-price (large dual-LP value) selectors first so the
             # SAT solver branches on them earlier, biasing cores toward them.
-            enforced.sort(key=lambda i: -self._last_fractional[i])
+            enforced.sort(key=lambda i: -self._last_fractional_vals[i])
 
         return [self.selectors[i] for i in enforced]
 
@@ -164,9 +171,9 @@ class IHSSolver:
         the unhit (low-ȳ) ones one at a time and re-call SAT. If a deeper
         core comes back, prefer it. Bounded by a small fan-out for tractability.
         """
-        y_bar = self._last_fractional
-        if y_bar is None:
+        if not hasattr(self, '_last_fractional_vals'):
             return base_core
+        y_bar = self._last_fractional_vals
         best_core = base_core
         best_violation = 1.0 - sum(y_bar[i] for i in base_core)
 
@@ -194,26 +201,80 @@ class IHSSolver:
 
     # ----------------------------------------------------------------- solve
 
+    def _get_upper_bound(self) -> float:
+        """Get a heuristic upper bound by solving the hard clauses."""
+        sat = self._sat.solve()
+        if not sat:
+            return float('inf')
+        model = self._sat.get_model()
+        cost = 0.0
+        # Check which soft clauses are falsified by this model
+        for i, soft_cl in enumerate(self.wcnf.soft):
+            satisfied = False
+            for lit in soft_cl:
+                if (lit > 0 and model[abs(lit)-1] > 0) or (lit < 0 and model[abs(lit)-1] < 0):
+                    satisfied = True
+                    break
+            if not satisfied:
+                cost += self.weights[i]
+        return cost
+
     def solve(self) -> tuple[float, frozenset[int]]:
         known = set(self.cores)
+        fixed_satisfied = set()
+        ub = self._get_upper_bound()
+        
         for _ in range(self.config.max_iters):
             self.stats.iterations += 1
 
             H_star = self._solve_master()
+            
+            if self.config.reduced_cost_fixing and hasattr(self, '_last_lp_obj'):
+                # Reduced cost fixing: if lb + red_cost > ub, then y_i must be 0 (clause satisfied)
+                for i in range(self.n_soft):
+                    if i in fixed_satisfied:
+                        continue
+                    if self._last_lp_obj + self._last_djs[i] > ub + 1e-6:
+                        self._sat.add_clause(list(self.wcnf.soft[i]))
+                        fixed_satisfied.add(i)
+
             probe_dropped = self._probe_set(H_star)
 
             # 1. Probe at H_star (or in-out point) — always done.
             assumptions = self._build_assumptions(probe_dropped)
             sat, raw_core = self._sat_call(assumptions)
 
-            # If we probed at a strict subset of H_star (in-out) and it's SAT,
-            # then H_star itself drops more clauses so it is also SAT. Optimal.
             if sat:
                 cost = sum(self.weights[i] for i in H_star)
                 self.stats.cost = cost
                 return cost, H_star
 
             core = self._core_to_indices(raw_core)
+            
+            if core:
+                if self.config.pareto_selection:
+                    core = self._pareto_refine(core, probe_dropped)
+                
+                if core not in known:
+                    self.cores.append(core)
+                    known.add(core)
+                    self.stats.cores_found += 1
+                
+                # Multi-core extraction: find disjoint cores
+                if self.config.multi_core:
+                    current_dropped = set(probe_dropped) | core
+                    while True:
+                        assumptions = self._build_assumptions(frozenset(current_dropped))
+                        sat, raw_core = self._sat_call(assumptions)
+                        if sat:
+                            break
+                        next_core = self._core_to_indices(raw_core)
+                        if not next_core or next_core in known:
+                            break
+                        self.cores.append(next_core)
+                        known.add(next_core)
+                        self.stats.cores_found += 1
+                        current_dropped |= next_core
 
             # If the in-out probe returned a duplicate (stagnation), fall back
             # to probing at H_star directly to make sure we generate a fresh
@@ -225,20 +286,13 @@ class IHSSolver:
                     self.stats.cost = cost
                     return cost, H_star
                 core = self._core_to_indices(raw_core)
+                if core and core not in known:
+                    self.cores.append(core)
+                    known.add(core)
+                    self.stats.cores_found += 1
 
-            if not core:
+            if not core and not self.config.multi_core:
                 break
-
-            if self.config.pareto_selection:
-                core = self._pareto_refine(core, probe_dropped)
-
-            if core in known:
-                # Truly stuck: cannot generate a new constraint for the master.
-                break
-
-            self.cores.append(core)
-            known.add(core)
-            self.stats.cores_found += 1
 
             # Update stabilization state.
             if self.config.wentges_alpha0 > 0:

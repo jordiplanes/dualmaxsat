@@ -690,6 +690,28 @@ Because soundness does not depend on which specific core is returned, this is
 a pure orthogonal improvement and can be layered on top of existing IHS or
 core-guided implementations.
 
+\subsubsection{Multi-core Extraction (Multi-column Generation)}
+
+In textbook column generation, adding multiple columns with negative reduced
+cost in a single iteration often accelerates convergence. The MaxSAT analog
+is \emph{multi-core extraction}: after finding an initial core~$\kappa$,
+continue probing the SAT oracle for additional cores that are not hit by the
+current $H^*$ and are ideally disjoint from those already found in the current
+iteration. This amortizes the cost of the master IP solve over several new
+constraints, reducing the number of outer-loop iterations.
+
+\subsubsection{Reduced Cost Fixing (Variable Hardening)}
+
+A powerful technique from Lagrangian relaxation and BnP is fixing variables
+based on their reduced costs. Let $z_{\mathrm{LP}}$ be the optimal value of the
+master's LP relaxation, and $\bar{c}_i$ be the reduced cost (dual slacks) of
+variable $y_i$. If $z_{\mathrm{LP}} + \bar{c}_i > \mathit{ub}$ (the current
+upper bound), then $y_i$ must be $0$ in any optimal solution. In IHS, this
+means soft clause $s_i$ must be satisfied, and it can be safely moved to the
+hard clause set $\mathcal{H}$ for all subsequent SAT calls. This
+``variable hardening'' leverages the dual information from the master to
+simplify the subproblem.
+
 \subsubsection{Dual Stabilization for IHS}
 
 The IHS master, viewed as the dual of the packing
