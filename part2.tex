@@ -214,7 +214,8 @@ two clauses).
 \subsubsection{Running IHS-IP and DW in Lockstep}
 
 We let the SAT oracle, when several cores are unhit, return them in the fixed
-order $\kappa_a, \kappa_b, \kappa_c$ (any common rule works). \cref{tab:trace-p4}
+order $\kappa_a, \kappa_b, \kappa_c$ (any common rule works, fulfilling Hypothesis (b)
+of \cref{prop:equiv} to ensure both algorithms trace the exact same path). \cref{tab:trace-p4}
 traces both algorithms. For DW we report the dual prices $y^{(t)}$ (the
 restricted-primal optimum) used by pricing, and the dual master value; for
 IHS we report the integer hitting set $H_t^\star$ and the lower bound. Recall
@@ -338,8 +339,8 @@ not minimal. The \textbf{minimal cores are the three pairs}
 \kappa_{12}=\{s_1,s_2\},\quad \kappa_{13}=\{s_1,s_3\},\quad \kappa_{23}=\{s_2,s_3\},
 \]
 forming a triangle $K_3$---an \emph{odd} cycle, hence non-bipartite, hence with
-a fractional vertex-cover gap. The true MaxSAT optimum: at most one $x_i$ may be
-true, so at least two soft clauses are falsified, and $z^\star = 2$.
+a fractional vertex-cover gap. For the true MaxSAT optimum, since at most one $x_i$ may be
+true, at least two soft clauses must be falsified, and $z^\star = 2$.
 
 \subsubsection{What DW Computes}
 \label{sec:dwcomputes}
@@ -444,7 +445,8 @@ the gap is instance-dependent.
 The two results are not in tension; together they locate the equivalence
 exactly.
 
-\paragraph{1. LP vs.\ integer master (the decisive point).}
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=*]
+\item \textbf{LP vs.\ integer master (the decisive point).}
 Pure Dantzig--Wolfe is an \emph{LP} algorithm: it converges to
 $z^\star_{\mathrm{LP}}$, the value of the LP relaxation, which is the
 ``Dantzig--Wolfe bound.'' IHS-LP shares this and is genuinely DW
@@ -459,7 +461,7 @@ collapsing the entire branch-and-bound tree into a sequence of flat master
 solves. The integer master is exactly what lets IHS return $2$ rather than $3/2$
 on $K_3$.
 
-\paragraph{2. Pricing is separation, not optimization.}
+\item \textbf{Pricing is separation, not optimization.}
 Classical DW pricing solves an \emph{optimization}---$\min_{p\in\mathcal{P}}
 (c - A^\top\pi)^\top p$---and returns the \emph{most} negative reduced-cost
 column. The SAT oracle in IHS returns \emph{some} unhit core, not the
@@ -473,7 +475,7 @@ exceeds a single SAT call; the plain SAT oracle implements separation only at
 integral master solutions---which the integer master of practical IHS
 conveniently guarantees.
 
-\paragraph{3. No convexity constraint.}
+\item \textbf{No convexity constraint.}
 The dual packing LP~\eqref{eq:pack} has no row $\sum_\kappa \lambda_\kappa = 1$.
 Strictly, then, IHS-LP is \emph{column generation}, and Dantzig--Wolfe is the
 special case of column generation in which the columns are the extreme points
@@ -484,7 +486,7 @@ single given polyhedron. Calling this ``Dantzig--Wolfe'' rather than ``column
 generation / Benders-in-the-dual'' is a mild and common abuse; it is exact only
 under the dual reading of \cref{lem:rowcol}.
 
-\paragraph{4. IHS lives on the Benders$\,\leftrightarrow\,$DW bridge.}
+\item \textbf{IHS lives on the Benders$\,\leftrightarrow\,$DW bridge.}
 On the primal side IHS adds \emph{rows} (cores) to a master over the
 complicating variables $y$---textbook \emph{Benders / cutting planes}. By
 \cref{lem:rowcol} that is identically \emph{column generation
@@ -493,6 +495,7 @@ is right: IHS is simultaneously a Benders-style and a DW-style method, the two
 being the same LP object seen from opposite sides. The single caveat the square
 omits is that the practical master is integer, which sits \emph{above} both LP
 methods.
+\end{enumerate}
 
 
 %----------------------------------------------------------------------

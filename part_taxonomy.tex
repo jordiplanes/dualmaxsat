@@ -38,8 +38,8 @@ process.
 \paragraph{Closing the duality gap.}
 A primary challenge in Lagrangian relaxation is the \emph{duality gap}: the
 relaxed bound may never meet the integer optimum. IHS resolves this by
-treating the SAT solver as a conflict generator that provides \emph{all}
-necessary constraints to the dual. Because the hitting-set master is integer
+treating the SAT solver as a conflict generator that provides the necessary
+\emph{binding} constraints to the dual. Because the hitting-set master is integer
 (\textsc{IHS-IP}), it does not merely ascend to the LP bound $z^\star_{\mathrm{LP}}$
 but continues adding cores until the lower bound meets an achievable upper bound,
 effectively closing the integrality gap through iterative constraint generation.
@@ -82,9 +82,9 @@ satisfies an MSS of maximum total weight.
 
 By the hitting-set duality of~\citet{liffiton2008algorithms}, a minimum hitting
 set of all cores is equivalent to finding a Maximum Satisfiable Subset. Viewed
-this way, IHS is a **Row Generation** algorithm on the hitting-set formulation.
-Its dual is a **Column Generation** algorithm where each column represents an
-MSS. This mirrors the Dantzig--Wolfe decomposition of Section 2, but where the
+this way, IHS is a \textbf{Row Generation} algorithm on the hitting-set formulation.
+Its dual is a \textbf{Column Generation} algorithm where each column represents an
+MSS. This mirrors the Dantzig--Wolfe decomposition of \cref{sec:part1}, but where the
 ``columns'' are feasible assignments (MSSes) rather than dual variables for
 cores.
 
