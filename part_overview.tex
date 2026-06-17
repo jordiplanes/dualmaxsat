@@ -1,0 +1,41 @@
+%======================================================================
+\section{Overview and Roadmap}
+\label{sec:overview}
+%======================================================================
+
+This memo collects four short technical notes. Each can be read
+independently, but they were drafted to be read in sequence: the first
+frames IHS structurally, the second tests how far the framing carries, the
+third broadens the mapping to other OR paradigms, and the fourth connects
+it to empirical practice.
+
+\begin{itemize}
+\item \textbf{\Cref{sec:part1} (Decomposition View):} develops the decomposition view. After reviewing the
+core-guided and IHS algorithm families and the LBBD and Dantzig--Wolfe
+templates, it identifies the row--column duality between cores and cuts,
+gives a small worked example, and closes with a catalog of OR techniques
+whose transfer to MaxSAT is supported by the analogy.
+
+\item \textbf{\Cref{sec:part2} (Equivalence Analysis):} isolates a single claim from \cref{sec:part1}---``IHS
+is Dantzig--Wolfe on the dual packing LP''---and asks whether it is literally
+true. The answer is yes for an LP master (the $P_4$ example and the exact
+equivalence proposition), and no for the integer master used in practice
+(the $K_3$ counterexample). The verdict locates the equivalence at the
+integrality gap of the hitting-set polytope.
+
+\item \textbf{\Cref{sec:taxonomy} (Broader Taxonomy):} provides a broader taxonomy of the relationships
+between IHS and OR methods. It interprets IHS as a discrete form of
+Lagrangian relaxation (dual ascent) and a primal cutting-plane method, and
+discusses the dual column-generation view in the space of Maximal
+Satisfiable Subsets (MSSes).
+
+\item \textbf{\Cref{sec:part3} (Empirical Landscape):} reads the empirical study of
+\citet{petrova2025empirical} on IHS for weighted CSPs through the lens of
+the preceding sections, mapping their two design axes onto the in-out
+separation and Pareto-cut selection techniques predicted by the
+decomposition framing.
+\end{itemize}
+
+Readers familiar with the core/correction-set duality and with column
+generation may skip directly to \cref{sec:part2}; readers interested only in
+solver design choices may skip directly to \cref{sec:part3}.

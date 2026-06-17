@@ -1,0 +1,17 @@
+\begin{abstract}
+This memo combines four notes on Implicit Hitting Set (IHS) methods for
+MaxSAT and Weighted CSP. Part~1 frames the algorithmic landscape. It models
+core-guided MaxSAT as a Logic-Based Benders Decomposition, and IHS as
+Dantzig--Wolfe column generation on the dual core-packing LP, separating
+structural features that transfer from those that do not. 
+
+Part~2 sharpens this claim with a worked example showing exact equivalence at the LP level,
+and a three-clause counterexample showing that the integer master used by
+practical solvers is strictly stronger than Dantzig--Wolfe. Part~3 provides
+a broader taxonomy of IHS--OR relationships, mapping the algorithm to
+Lagrangian relaxation, dual ascent, and cutting-plane methods. Part~4 reads the
+32-configuration empirical study of \citet{petrova2025empirical} on IHS for
+weighted CSPs through the same OR lens, confirming the qualitative
+predictions of Parts~1--3 while reordering the relative importance of the
+design axes.
+\end{abstract}

@@ -12,6 +12,7 @@
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
+\usepackage{graphicx}
 \usepackage{natbib}
 \usepackage{hyperref}
 \hypersetup{
@@ -43,68 +44,12 @@
 
 \maketitle
 
-\begin{abstract}
-This memo combines four notes on Implicit Hitting Set (IHS) methods for
-MaxSAT and Weighted CSP. Part~1 frames the algorithmic landscape. It models
-core-guided MaxSAT as a Logic-Based Benders Decomposition, and IHS as
-Dantzig--Wolfe column generation on the dual core-packing LP, separating
-structural features that transfer from those that do not. 
-
-Part~2 sharpens this claim with a worked example showing exact equivalence at the LP level,
-and a three-clause counterexample showing that the integer master used by
-practical solvers is strictly stronger than Dantzig--Wolfe. Part~3 provides
-a broader taxonomy of IHS--OR relationships, mapping the algorithm to
-Lagrangian relaxation, dual ascent, and cutting-plane methods. Part~4 reads the
-32-configuration empirical study of \citet{petrova2025empirical} on IHS for
-weighted CSPs through the same OR lens, confirming the qualitative
-predictions of Parts~1--3 while reordering the relative importance of the
-design axes.
-\end{abstract}
+\input{abstract}
 
 \tableofcontents
 \listofalgorithms
 
-%======================================================================
-\section{Overview and Roadmap}
-\label{sec:overview}
-%======================================================================
-
-This memo collects four short technical notes. Each can be read
-independently, but they were drafted to be read in sequence: the first
-frames IHS structurally, the second tests how far the framing carries, the
-third broadens the mapping to other OR paradigms, and the fourth connects
-it to empirical practice.
-
-\begin{itemize}
-\item \textbf{\Cref{sec:part1} (Decomposition View):} develops the decomposition view. After reviewing the
-core-guided and IHS algorithm families and the LBBD and Dantzig--Wolfe
-templates, it identifies the row--column duality between cores and cuts,
-gives a small worked example, and closes with a catalog of OR techniques
-whose transfer to MaxSAT is supported by the analogy.
-
-\item \textbf{\Cref{sec:part2} (Equivalence Analysis):} isolates a single claim from \cref{sec:part1}---``IHS
-is Dantzig--Wolfe on the dual packing LP''---and asks whether it is literally
-true. The answer is yes for an LP master (the $P_4$ example and the exact
-equivalence proposition), and no for the integer master used in practice
-(the $K_3$ counterexample). The verdict locates the equivalence at the
-integrality gap of the hitting-set polytope.
-
-\item \textbf{\Cref{sec:taxonomy} (Broader Taxonomy):} provides a broader taxonomy of the relationships
-between IHS and OR methods. It interprets IHS as a discrete form of
-Lagrangian relaxation (dual ascent) and a primal cutting-plane method, and
-discusses the dual column-generation view in the space of Maximal
-Satisfiable Subsets (MSSes).
-
-\item \textbf{\Cref{sec:part3} (Empirical Landscape):} reads the empirical study of
-\citet{petrova2025empirical} on IHS for weighted CSPs through the lens of
-the preceding sections, mapping their two design axes onto the in-out
-separation and Pareto-cut selection techniques predicted by the
-decomposition framing.
-\end{itemize}
-
-Readers familiar with the core/correction-set duality and with column
-generation may skip directly to \cref{sec:part2}; readers interested only in
-solver design choices may skip directly to \cref{sec:part3}.
+\input{part_overview}
 
 \input{part1}
 
@@ -114,155 +59,7 @@ solver design choices may skip directly to \cref{sec:part3}.
 
 \input{part3}
 
-%======================================================================
-\section{Closing Synthesis}
-\label{sec:closing}
-%======================================================================
-
-Three observations summarize the memo.
-
-\begin{description}
-\item[The structural mapping is sound but conditional.] The pairings
-core-guided $\leftrightarrow$ LBBD and IHS $\leftrightarrow$ Dantzig--Wolfe
-developed in \cref{sec:part1} are correct at the level of LP duality between
-primal cuts and dual columns and at the level of oracle soundness. They
-break at the level of complexity (pricing is NP-complete, not polynomial),
-master tractability (the practical master is integer), and primal geometry
-(cores are not extreme points of a fixed polytope). Techniques whose
-correctness depends only on the row--column duality should transfer;
-techniques that rely on polynomial pricing or on LP master geometry should
-not be expected to transfer without adaptation.
-
-\item[The integer master is exactly where IHS leaves Dantzig--Wolfe
-behind.] \Cref{sec:part2} makes this precise: IHS with an LP master is
-literally column generation on the dual packing LP, while the IHS used by
-real solvers solves the master as an integer program and is strictly
-stronger. The difference is the integrality gap of the hitting-set
-polytope---vanishing on bipartite-conflict instances (the $P_4$ trace),
-positive on odd-cycle instances (the $K_3$ counterexample, where DW
-terminates at $3/2$ and IHS at the true optimum $2$).
-
-\item[Empirics confirm the qualitative predictions but reorder
-priorities.] \Citet{petrova2025empirical}, surveyed in \cref{sec:part3},
-find that stronger cores (maximal extraction)---the analog of
-Pareto-optimal cut selection---pay off broadly: maximal cores are the
-best option on $10$ of $12$ benchmark classes. On the hitting-vector axis no
-option dominates: relaxed subproblems (cost-bounded, and greedy layered on
-cost-bounded) win on $8$ of the $12$ classes, the exact master on the
-remaining $4$, and greedy layered on the exact master never wins.
-Cost-function merging, a preprocessing axis the framing of
-\cref{sec:part1,sec:part2,sec:taxonomy} does not model, is the single most
-impactful design choice.
-
-\item[Open directions.] Three concrete avenues stand out. (i) The
-weighted case of the equivalence: the cleanest LP encodings of core-guided
-algorithms~\citep{katsirelos2023analysis} cover only unweighted instances,
-and the weighted analysis is open. (ii) An LP-relaxation view of the WCSP
-hitting-vector subproblem, building on the Lagrangian view of
-\cref{sec:taxonomy}, would unlock the dual-stabilization and price-aware
-techniques of \cref{sec:techniques} for the empirical setting of
-\cref{sec:part3}. (iii) Further hybrid refinements: while basic
-cross-family warm-starting behaves as predicted on the toy instances of
-\cref{tab:results}, more sophisticated interleaving---e.g., dynamic switching between core-guided
-and IHS phases based on progress metrics---remains unexplored.
-\end{description}
-
-\paragraph{Empirical illustration.} \Cref{tab:results} reports a small
-illustrative run of the techniques surveyed in \cref{sec:techniques}, produced
-by \texttt{src/example.py} against the prototype \texttt{IHSSolver}
-(\texttt{src/ihs.py}). Three instances are used:
-\begin{itemize}
-\item \textbf{$P_4$ (worked example, \cref{sec:worked}):} 4 unit soft clauses
-plus 3 conflict hard clauses; LP and IP optima both $2$.
-\item \textbf{$K_3$ (counterexample, \cref{sec:counter}):} 3 unit soft clauses
-plus pairwise-conflict hard clauses; LP $1.5$, IP $2$.
-\item \textbf{Weighted Chain:} 5 conflicting unit-clause pairs with asymmetric
-weights, one hard tying clause, and one soft clause participating in multiple
-cores ($10$ soft, $12$ hard total); LP and IP optima both $13$. Designed so
-the stabilization techniques have non-trivial structure to act on.
-\end{itemize}
-Each row is one technique from \cref{sec:techniques} layered on the baseline,
-plus a final \textsc{Hybrid} row enabling all of them at once. We report the
-number of outer iterations, SAT-oracle calls, IP-master solves, and Pareto
-refinements (additional in-search SAT calls); the returned cost and the
-final LP-master value were identical across all configurations on each
-instance and are reported in the caption. The warm-start seed is a
-5-iteration core-guided (Fu--Malik) phase, harvested via
-\texttt{coreguided.harvest\_cores}.
-\Cref{tab:results} should be read as a sanity check rather than a benchmark
-study: the instances are tiny and the per-iteration cost is dominated by
-fixed overhead. Every configuration returned the true optimum on every instance 
-(cost $2$, $2$, and $13$ respectively), with final LP-master values $2.0$, 
-$1.5$, and $13.0$: on $K_3$ the LP value stays at $z^\star_{\mathrm{LP}} = 1.5$ 
-while the IP master returns $z^\star = 2$, the gap predicted by \cref{prop:nonequiv}.
-
-In the table, \textit{It} denotes outer iterations, \textit{SAT} is SAT-oracle calls, 
-\textit{IP} is IP-master solves, and \textit{Pr} is Pareto refinements. Warm-start 
-uses a 5-iteration Fu--Malik seed.
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Illustrative runs of \cref{sec:techniques} techniques on the three
-toy instances shipped in \texttt{src/wcnf/}.}
-\label{tab:results}
-\setlength{\tabcolsep}{4.5pt}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{l cccc cccc cccc}
-\toprule
-& \multicolumn{4}{c}{\textbf{$P_4$ (worked)}}
-& \multicolumn{4}{c}{\textbf{$K_3$ (counter)}}
-& \multicolumn{4}{c}{\textbf{Weighted Chain}} \\
-\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
-\textbf{Config.}
-& It & SAT & IP & Pr
-& It & SAT & IP & Pr
-& It & SAT & IP & Pr \\
-\midrule
-Plain IHS (baseline)         & 3 & 3 & 3 & 0  & 4 & 4 & 4 & 0  & 7 & 7  & 7 & 0 \\
-+ Warm-start (Fu--Malik seed)& 1 & 1 & 1 & 0  & 2 & 2 & 2 & 0  & 2 & 2  & 2 & 0 \\
-+ Pareto core selection      & 3 & 4 & 3 & 0  & 4 & 6 & 4 & 0  & 7 & 19 & 7 & 0 \\
-+ Box penalty ($\alpha_0{=}1$, $\rho{=}0.5$)
-                              & 3 & 3 & 3 & 0  & 4 & 4 & 4 & 0  & 7 & 7  & 7 & 0 \\
-+ In-out separation ($\lambda{=}0.5$)
-                              & 3 & 5 & 3 & 0  & 4 & 7 & 4 & 0  & 7 & 13 & 7 & 0 \\
-+ Price-aware ordering       & 3 & 3 & 3 & 0  & 4 & 4 & 4 & 0  & 7 & 7  & 7 & 0 \\
-\textsc{Hybrid} (all)        & 1 & 1 & 1 & 0  & 2 & 4 & 2 & 0  & 2 & 8  & 2 & 0 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\paragraph{Reading the table.} Three observations, all weak by design (the
-instances are too small for anything stronger):
-\begin{enumerate}
-\item \textbf{Correctness.} All configurations return $z^\star$ on all three
-instances. In particular, on $K_3$ the IHS-IP master correctly returns
-$z^\star = 2$ even though the LP master value remains $1.5$---the gap predicted
-by \cref{prop:nonequiv}.
-
-\item \textbf{Warm-start dominates iteration count.} On each instance, warm
-starting from a 5-step core-guided phase collapses the outer loop to
-$1$--$2$ iterations: the seeded master already contains enough cores that the
-first SAT call either certifies optimality immediately ($P_4$) or needs one
-more cut ($K_3$, Weighted Chain). This is the cleanest empirical signal in the
-table.
-
-\item \textbf{Stabilization techniques are inactive at this scale.} The
-box-penalty stabilizer and price-aware ordering produce numerically identical
-runs to the baseline, and
-in-out separation and Pareto selection only add SAT calls without changing the
-iteration count or the cores discovered. This is consistent with their
-intended regime---late-phase tailing-off on degenerate masters---which the
-toy instances do not exhibit. The \textsc{Hybrid} row is essentially
-warm-start with additional SAT overhead from in-out and Pareto.
-\end{enumerate}
-
-A meaningful evaluation of the stabilization axis requires instances large
-enough to exhibit master degeneracy and dual oscillation. The MSE benchmarks
-or a structured weighted family (analogous to the Pedigree or SPOT5 classes
-discussed in \cref{sec:part3}) would be the natural next step; \cref{tab:results}
-serves only to confirm that the implementations of \cref{sec:techniques} are
-correct and that warm-starting behaves as predicted.
+\input{part_closing}
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

@@ -26,10 +26,16 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the example benchmark:
+Run the toy instances example:
 
 ```bash
 python3 src/example.py
+```
+
+Run the parameterized benchmarks:
+
+```bash
+python3 src/benchmarks.py
 ```
 
 ## Documentation

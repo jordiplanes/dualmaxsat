@@ -29,13 +29,12 @@ def run(label: str, wcnf_path: str, config: IHSConfig) -> None:
     )
 
 
-def compare(title: str, wcnf_path: str) -> None:
+def compare_wcnf(title: str, wcnf: WCNF, source_label: str = "") -> None:
     print()
     print("=" * 100)
-    print(f"{title}  [{wcnf_path}]")
+    print(f"{title}  [{source_label}]")
     print("=" * 100)
 
-    wcnf = load(wcnf_path)
     seed = harvest_cores(wcnf, budget=5)
     print(f"  (warm-start seed harvested {len(seed)} cores)")
 
@@ -81,6 +80,9 @@ def compare(title: str, wcnf_path: str) -> None:
         ),
     )
 
+def compare(title: str, wcnf_path: str) -> None:
+    wcnf = load(wcnf_path)
+    compare_wcnf(title, wcnf, wcnf_path)
 
 def main():
     compare("Worked example (§5): 4 unit soft clauses, optimum 2", "worked.wcnf")
