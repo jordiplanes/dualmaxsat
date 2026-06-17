@@ -164,7 +164,7 @@ class IHSSolver:
 
     # --------------------------------------------------------------- pareto
 
-    def _pareto_refine(self, base_core: frozenset[int], dropped: frozenset[int]) -> frozenset[int]:
+    def _pareto_refine(self, base_core: frozenset[int], dropped: frozenset[int], known: set[frozenset[int]]) -> frozenset[int]:
         """Search for a core with larger violation than `base_core` against ȳ.
 
         Strategy: among the currently enforced selectors, additionally enforce
@@ -191,6 +191,8 @@ class IHSSolver:
             if sat:
                 continue
             trial_core = self._core_to_indices(raw_core)
+            if trial_core in known:
+                continue
             violation = 1.0 - sum(y_bar[i] for i in trial_core)
             if violation > best_violation + 1e-9:
                 best_core = trial_core
@@ -253,7 +255,7 @@ class IHSSolver:
             
             if core:
                 if self.config.pareto_selection:
-                    core = self._pareto_refine(core, probe_dropped)
+                    core = self._pareto_refine(core, probe_dropped, known)
                 
                 if core not in known:
                     self.cores.append(core)

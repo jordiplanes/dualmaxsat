@@ -18,7 +18,7 @@ def run_solver(wcnf, config, label, timeout=20):
     return solver.stats.iterations, end_time - start_time
 
 def main():
-    sizes = [15, 25, 35, 45]
+    sizes = [20, 30, 40, 47]
     p_edge = 0.2
     
     config_labels = [

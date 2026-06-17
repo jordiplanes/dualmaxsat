@@ -144,25 +144,40 @@ warm-start with additional SAT overhead from in-out and Pareto.
 A meaningful evaluation of the stabilization axis requires instances large
 enough to exhibit master degeneracy and dual oscillation. To this end, 
 parameterized benchmarks have been implemented and tested for structured families 
-like Vertex Cover on random graphs up to size $N=45$. As shown in \cref{fig:benchmarks}, 
+including Vertex Cover, Weighted Set Cover, and Weighted Max-3SAT. 
+As shown in \cref{fig:benchmarks,fig:additional_benchmarks}, 
 an ablation study reveals surprising dynamics between the transferred techniques. 
-When scaled to larger instances, the \emph{Multi-core extraction} feature emerges as 
-the overwhelmingly dominant factor, independently reducing the number of outer 
-iterations and overall runtime by more than a factor of three compared to the 
-baseline IHS.
 
-Interestingly, the \textsc{Hybrid} configuration---which enables all stabilization, 
+On the Vertex Cover and Weighted Set Cover instances, the \emph{Multi-core extraction} 
+feature emerges as the overwhelmingly dominant factor, independently reducing the number 
+of outer iterations and overall runtime by more than a factor of three compared to the 
+baseline IHS. Interestingly, the \textsc{Hybrid} configuration---which enables all stabilization, 
 warm-starting, and pricing features simultaneously---actually performs \emph{worse} 
-than the bare Multi-core extension. This points to negative interference: the 
+than the bare Multi-core extension on these problems. This points to negative interference: the 
 aggressive dual-stabilization (Wentges) and modified core structures (Pareto selection) 
 likely restrict the SAT oracle's ability to efficiently harvest large numbers of 
 disjoint cores in a single pass. This suggests that while individual BnP techniques 
 are potent, their interaction in the MaxSAT context requires careful, dynamic tuning 
 rather than static composition.
 
+Conversely, the Weighted Max-3SAT instances (\cref{fig:additional_benchmarks}, bottom row) 
+highlight an important boundary condition: pushing the clause-to-variable ratio to $C=6V$ 
+places the instances firmly in the unsatisfiable, exponentially difficult regime. Here, 
+unlike Set Cover, the baseline solver rapidly hits an exponential wall, while the 
+warm-started and multi-core configurations manage to stave off the explosion slightly 
+longer. This confirms that while the core-extraction framework transfers universally, 
+its relative advantage depends heavily on the constraint geometry of the problem.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{benchmark_plot.png}
 \caption{Ablation study of iterations and execution time across parameterized graph sizes ($N \in \{15, 25, 35, 45\}$) for the Vertex Cover problem. The Multi-core configuration dominates all others, while the Hybrid composition exhibits negative interference.}
 \label{fig:benchmarks}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{additional_plot.png}
+\caption{Ablation study for Weighted Set Cover (top) and Weighted Max-3SAT (bottom). The Set Cover results mirror the Vertex Cover dynamics, while Max-3SAT at $C=6V$ pushes the solver into exponential difficulty.}
+\label{fig:additional_benchmarks}
 \end{figure}

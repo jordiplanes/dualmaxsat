@@ -2,7 +2,7 @@ import random
 from pysat.formula import WCNF
 from example import compare_wcnf
 
-def generate_random_max3sat(n_vars: int, n_clauses: int, seed: int = 42) -> WCNF:
+def generate_random_max3sat(n_vars: int, n_clauses: int, seed: int = 42, weighted: bool = False) -> WCNF:
     """Generate a random Max-3SAT instance where all clauses are soft."""
     rng = random.Random(seed)
     wcnf = WCNF()
@@ -12,10 +12,11 @@ def generate_random_max3sat(n_vars: int, n_clauses: int, seed: int = 42) -> WCNF
         # Randomly negate
         clause = [v if rng.random() > 0.5 else -v for v in vars]
         # Weight 1, soft clause
-        wcnf.append(clause, weight=1)
+        weight = rng.randint(1, 100) if weighted else 1
+        wcnf.append(clause, weight=weight)
     return wcnf
 
-def generate_vertex_cover(n_nodes: int, p_edge: float, seed: int = 42) -> WCNF:
+def generate_vertex_cover(n_nodes: int, p_edge: float, seed: int = 42, weighted: bool = False) -> WCNF:
     """
     Generate a Minimum Vertex Cover instance on a random Erdos-Renyi graph G(n, p).
     Formulated as MaxSAT:
@@ -35,11 +36,12 @@ def generate_vertex_cover(n_nodes: int, p_edge: float, seed: int = 42) -> WCNF:
                 
     # Soft clauses to minimize cover size (maximize nodes NOT in cover)
     for i in range(1, n_nodes + 1):
-        wcnf.append([-i], weight=1)
+        weight = rng.randint(1, 100) if weighted else 1
+        wcnf.append([-i], weight=weight)
         
     return wcnf, edges
 
-def generate_set_cover(n_elements: int, n_sets: int, p_contain: float, seed: int = 42) -> WCNF:
+def generate_set_cover(n_elements: int, n_sets: int, p_contain: float, seed: int = 42, weighted: bool = False) -> WCNF:
     """
     Generate a Minimum Set Cover instance.
     - Variables: 1 to n_sets (representing whether each set is chosen).
@@ -68,7 +70,8 @@ def generate_set_cover(n_elements: int, n_sets: int, p_contain: float, seed: int
         
     # Soft clauses: minimize sets chosen
     for s in range(1, n_sets + 1):
-        wcnf.append([-s], weight=1)
+        weight = rng.randint(1, 100) if weighted else 1
+        wcnf.append([-s], weight=weight)
         
     return wcnf
 
