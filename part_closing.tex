@@ -181,3 +181,24 @@ its relative advantage depends heavily on the constraint geometry of the problem
 \caption{Ablation study for Weighted Set Cover (top) and Weighted Max-3SAT (bottom). The Set Cover results mirror the Vertex Cover dynamics, while Max-3SAT at $C=6V$ pushes the solver into exponential difficulty.}
 \label{fig:additional_benchmarks}
 \end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{scheduling_plot_1.png}
+\caption{Ablation study for Task-Machine Allocation (Generalized Assignment). Demonstrates extremely fast convergence with the Multi-core technique.}
+\label{fig:scheduling_1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{scheduling_plot_2.png}
+\caption{Ablation study for Airport Gate Allocation with Conflicts. Highlights the heavy iteration requirements of the baseline and the massive advantage of Multi-core extraction.}
+\label{fig:scheduling_2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{scheduling_plot_3.png}
+\caption{Ablation study for Employee Shift Scheduling. Shows the robust improvement over the baseline by the Multi-core technique across various employee team sizes.}
+\label{fig:scheduling_3}
+\end{figure}
