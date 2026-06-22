@@ -77,18 +77,23 @@ def plot_experiment(title, sizes, xlabel, generator, *gen_args, filename="plot.p
     plt.close()
     print(f"Saved {filename}")
 
+def wrap_shift_scheduling(n_days, seed=42):
+    # Fix n_emps=4, req_per_day=2. Vary n_days.
+    return generate_shift_scheduling(4, n_days, 2, seed=seed)
+
 def main():
     # 1. Task Allocation
-    plot_experiment("Task Allocation", [4, 6, 8, 10], "Number of Tasks", 
-                    generate_task_allocation, 3, 4, seed=123, filename="scheduling_plot_1.png")
+    # Extended sizes to push beyond 10s execution
+    plot_experiment("Task Allocation", [6, 8, 10, 12, 14], "Number of Tasks", 
+                    generate_task_allocation, 3, 5, seed=123, filename="scheduling_plot_1.png")
     
     # 2. Gate Allocation
-    plot_experiment("Gate Allocation", [4, 5, 6, 7], "Number of Flights", 
+    plot_experiment("Gate Allocation", [5, 6, 7, 8], "Number of Flights", 
                     generate_gate_allocation, 3, 0.3, seed=123, filename="scheduling_plot_2.png")
     
     # 3. Shift Scheduling
-    plot_experiment("Shift Scheduling", [4, 5, 6], "Number of Employees", 
-                    generate_shift_scheduling, 4, 2, seed=123, filename="scheduling_plot_3.png")
+    plot_experiment("Shift Scheduling", [4, 5, 6, 7], "Number of Days", 
+                    wrap_shift_scheduling, seed=123, filename="scheduling_plot_3.png")
 
 if __name__ == "__main__":
     main()

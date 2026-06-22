@@ -48,7 +48,7 @@ techniques of \cref{sec:techniques} for the empirical setting of
 \cref{sec:part3}. (iii) Further hybrid refinements: while basic
 cross-family warm-starting behaves as predicted on the toy instances of
 \cref{tab:results}, more sophisticated interleaving---e.g., dynamic switching between core-guided
-and IHS phases based on progress metrics---remains unexplored.
+and IHS phases based on progress metrics, or leveraging initial disjoint cores to heavily prune incomplete solvers like linear search \citep{berg2020core}---remains underexplored.
 \end{description}
 
 \paragraph{Empirical illustration.} \Cref{tab:results} reports a small
@@ -151,7 +151,9 @@ an ablation study reveals surprising dynamics between the transferred techniques
 On the Vertex Cover and Weighted Set Cover instances, the \emph{Multi-core extraction} 
 feature emerges as the overwhelmingly dominant factor, independently reducing the number 
 of outer iterations and overall runtime by more than a factor of three compared to the 
-baseline IHS. Interestingly, the \textsc{Hybrid} configuration---which enables all stabilization, 
+baseline IHS. This completely aligns with the foundational Implicit Hitting Set literature 
+(\citealp{davies2011solving, davies2013exploiting}), which established that extracting multiple 
+disjoint cores per iteration is crucial for preventing the IP master from stalling. Interestingly, the \textsc{Hybrid} configuration---which enables all stabilization, 
 warm-starting, and pricing features simultaneously---actually performs \emph{worse} 
 than the bare Multi-core extension on these problems. This points to negative interference: the 
 aggressive dual-stabilization (Wentges) and modified core structures (Pareto selection) 
