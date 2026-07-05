@@ -166,7 +166,8 @@ implementable with the unmodified IHS oracle; this is a second, independent
 sense in which practical IHS departs from textbook column generation.
 Conveniently, the integer master of practical IHS guarantees integral prices,
 which is precisely what lets a plain SAT call serve as the separation routine
-(cf.\ \cref{sec:subtle}, point~2).
+(cf.\ \cref{sec:subtle}, point~2). \Cref{sec:cg-gap} develops outer-loop
+approximations to exactly this fractional pricing problem.
 \end{remark}
 
 \cref{prop:equiv} is the precise, defensible content of the slogan
@@ -526,3 +527,181 @@ In one sentence: \emph{IHS is Dantzig--Wolfe on the dual packing LP precisely up
 to the integrality gap of the hitting-set polytope---and that gap, which DW
 cannot close but the integer IHS master can, is exactly what makes IHS a correct
 MaxSAT solver rather than merely an LP-bound computation.}
+
+%----------------------------------------------------------------------
+\subsection{Closing the Gap: Pricing-Side Techniques from Column Generation}
+\label{sec:cg-gap}
+%----------------------------------------------------------------------
+
+The analysis so far is diagnostic: practical IHS is column generation up to
+two deviations on the pricing side. The oracle performs \emph{separation}
+rather than reduced-cost \emph{optimization} (\cref{sec:subtle}, point~2),
+and it separates only against \emph{integral} prices---fractional pricing
+being a weighted-MUS optimization that no single SAT call implements
+(\cref{rem:fracpricing}). This subsection turns the diagnosis prescriptive:
+we collect three techniques that close part of the distance to genuine
+column generation while keeping an \emph{unmodified} assumption-based SAT
+oracle. They correspond one-for-one to three standard ingredients of
+industrial column generation---approximate pricing rules, partial pricing
+over a restricted column pool, and column
+aggregation~\citep{desaulniers2005column}. The first two are outer-loop
+schedules over ordinary SAT calls; the third already exists in the MaxSAT
+literature as \emph{abstract cores}~\citep{berg2020abstract}, and the
+decomposition view explains both why it works and why it is the strongest
+of the three.
+
+\subsubsection{Price-Guided Separation: Approximating the Pricing Problem}
+\label{sec:price-guided}
+
+Fix a fractional optimum $\bar y$ of the restricted master LP. Exact
+pricing for the dual packing LP~\eqref{eq:pack} asks for
+\begin{equation}
+\pi(\bar y) \;=\; \min_{\kappa \in \mathcal{K}} \; \sum_{s_i \in \kappa} \bar y_i,
+\label{eq:pricing}
+\end{equation}
+an improving column existing iff $\pi(\bar y) < 1$
+(\cref{lem:rowcol}(ii)). Rather than solve \eqref{eq:pricing} exactly, we
+bracket it with a \emph{threshold sweep}. Let $\theta_1 < \cdots < \theta_r$
+enumerate the distinct values of $\bar y$ and let
+$S(\theta) = \{\, s_i : \bar y_i \le \theta \,\}$ be the soft clauses whose
+current dual price is at most $\theta$. Since $S(\theta) \subseteq
+S(\theta')$ for $\theta \le \theta'$, unsatisfiability of $\mathcal{H} \cup
+S(\theta)$ is monotone in $\theta$, so binary search with $O(\log r)$
+assumption-based SAT calls finds the least infeasible level
+$\theta^\dagger = \min\{\theta : \mathcal{H} \cup S(\theta) \text{ UNSAT}\}$
+(when one exists), together with a core $\kappa \subseteq
+S(\theta^\dagger)$.
+
+\begin{lemma}[Price bound for the threshold sweep]
+\label[lemma]{lem:sweep}
+Any core $\kappa \subseteq S(\theta)$ satisfies $\sum_{s_i \in \kappa}
+\bar y_i \le \theta\,|\kappa|$, so its column has reduced cost at least
+$1 - \theta|\kappa|$; in particular every core found at level $\theta$ with
+$|\kappa| < 1/\theta$ is an improving column for the restricted dual.
+Moreover no core exists inside any $S(\theta)$ with $\theta <
+\theta^\dagger$, so cores over $S(\theta^\dagger)$ are supported entirely
+on the cheapest-priced clauses that support any core at all.
+\end{lemma}
+
+\begin{proof}
+Each of the $|\kappa|$ terms is at most $\theta$ by membership in
+$S(\theta)$; the reduced-cost statement is then \cref{lem:rowcol}(ii). The
+last claim is the minimality of $\theta^\dagger$ under the monotonicity of
+$S(\cdot)$.
+\end{proof}
+
+Three remarks on deployment. First, the bound $\theta|\kappa|$ rewards
+\emph{core minimization}: trimming $\kappa$ to a minimal core shrinks
+$|\kappa|$ and tightens the violation estimate, so the sweep and
+core-trimming compose multiplicatively. Second, the sweep strictly
+subsumes the price-aware assumption ordering of \cref{sec:part1}
+(\cref{sec:techniques}): ordering biases the solver's conflict analysis
+\emph{within} a fixed enforced set, whereas the sweep changes the enforced
+set itself, and both leave CDCL internals untouched. Third, the sweep is a
+\emph{heuristic} separator: a violated core mixing cheap and expensive
+clauses can escape every level below its most expensive member.
+Correctness is unaffected---any core it returns is a valid master
+row---but termination must still be certified by the standard probe at the
+integral $H^\star$, exactly as in \cref{alg:ihs}. The sweep therefore
+slots in as a bound-improvement phase between master solves, never as a
+replacement for the terminal check.
+
+\subsubsection{Weight Stratification as Partial Pricing}
+\label{sec:stratified}
+
+In weighted instances the packing constraints~\eqref{eq:pack} are
+heterogeneous: a core $\kappa$ can carry dual weight at most
+$\min_{s_i \in \kappa} w_i$, its bottleneck capacity---this is why a
+disjoint-core phase certifies the lower bound $\sum_j \min_{s_i \in
+\kappa_j} w_i$. Columns supported on high-weight clauses are thus the ones
+able to raise the dual objective fastest. \emph{Stratification}, introduced
+for SAT-based weighted MaxSAT by \citet{ansotegui2012improving}, exploits
+exactly this: partition the soft clauses into strata by descending weight,
+enforce only the top stratum and extract cores until the oracle answers
+SAT, then merge in the next stratum, and so on.
+
+In column-generation terms this is \emph{partial pricing over a restricted
+column pool}~\citep{desaulniers2005column}: pricing is restricted to
+columns supported on the active strata---the high-capacity rows---and the
+pool is enlarged only when the restricted pricing problem prices out,
+which is precisely the SAT answer on the active strata. The correctness
+condition transfers verbatim: optimality may be declared only when
+\emph{exact} pricing over the full pool finds no improving column, i.e.,
+the terminal IHS probe must enforce all soft clauses outside $H^\star$.
+Everything before that terminal check is bound improvement and is free to
+be restricted.
+
+The two schedules compose naturally: within the active stratum, sweep by
+dual price as in \cref{sec:price-guided}. Stratification selects the rows
+with the \emph{capacity} to absorb new dual weight (primal cost $w$); the
+sweep selects, among those, the rows currently \emph{underpriced} by the
+master (dual price $\bar y$). This primal--dual pairing is the standard
+design space of pricing rules in large-scale column generation, imported
+wholesale into the IHS outer loop.
+
+\subsubsection{Abstract Cores as Column Aggregation}
+\label{sec:abstract-cores}
+
+Large weighted instances typically contain many near-interchangeable soft
+clauses, hence exponentially many near-symmetric cores: the master
+accumulates rows the LP cannot tell apart, and column generation stalls.
+This is a classical pathology with a classical remedy,
+\emph{aggregation}: group interchangeable subproblems and replace their
+individual columns by aggregate ones~\citep{desaulniers2005column}. The
+MaxSAT analogue already exists: \emph{abstract
+cores}~\citep{berg2020abstract}. Choose an abstraction set $A \subseteq
+\mathcal{S}$ (in practice, clauses of similar weight---note the kinship
+with the strata of \cref{sec:stratified}); introduce counting literals,
+defined by a cardinality encoding, asserting ``at least $k$ clauses of $A$
+are falsified.'' An abstract core is a core expressed over counting
+literals; in the simplest case it induces the master row
+\begin{equation}
+\sum_{s_i \in A} y_i \;\ge\; k.
+\label{eq:abstract-row}
+\end{equation}
+Both readings of \eqref{eq:abstract-row} are instructive.
+
+\paragraph{Dual reading: one column for exponentially many.} In the
+packing dual, \eqref{eq:abstract-row} is a single column with objective
+coefficient $k$ and incidence vector $\mathbf 1_A$. Using $y_i \le 1$, it
+dominates the $\binom{|A|}{|A|-k+1}$ ordinary rows $\sum_{s_i \in S} y_i
+\ge 1$ for $S \subseteq A$, $|S| = |A|-k+1$ (each such $S$ is indeed a
+core: if fewer than one clause of $S$ were falsified, fewer than $k$
+clauses of $A$ would be). One SAT call over counting literals prices this
+aggregate column; without aggregation, the same dual progress costs up to
+$\binom{|A|}{|A|-k+1}$ separate core extractions over symmetric
+subsets. This is column aggregation executed by a cardinality encoding.
+
+\paragraph{Primal reading: rank-$k$ rows tighten the LP master.} Row
+\eqref{eq:abstract-row} is in general \emph{not} implied by the ordinary
+core rows at the LP level, so abstract cores strictly strengthen the
+relaxation. The triangle of \cref{sec:counter} is the minimal witness: the
+three ordinary rows $y_i + y_j \ge 1$ admit the fractional point
+$(\tfrac12,\tfrac12,\tfrac12)$ of value $3/2$, whereas the abstract core
+$y_1 + y_2 + y_3 \ge 2$---valid because at most one $x_i$ can be true, so
+at least two soft clauses are falsified---forces value $2 = z^\star$.
+Indeed on $K_3$ row~\eqref{eq:abstract-row} is precisely the
+Chv\'atal--Gomory rounding of the three edge rows, the odd-cycle
+inequality. Abstract cores therefore do more than aggregate: they close
+part of the integrality gap that \cref{prop:nonequiv} identified as the
+exact distance between pure Dantzig--Wolfe and practical IHS. In the terms
+of \cref{tab:counter}, they move IHS-LP upward from $3/2$ toward $2$
+without invoking the integer master.
+
+The crux, as in DW aggregation, is choosing what to aggregate:
+\citet{berg2020abstract} cluster clauses by weight similarity, and report
+substantial gains inside an IHS solver on weighted benchmarks. The
+decomposition view suggests a dual-informed refinement---cluster clauses
+whose LP prices $\bar y_i$ move together across master iterations, i.e.,
+aggregate rows the master already treats as interchangeable---which to our
+knowledge is unexplored.
+
+\paragraph{Summary.} The three techniques upgrade the IHS oracle from
+``return any violated row'' toward the pricing discipline of industrial
+column generation: cheap columns first (\cref{sec:price-guided}),
+high-capacity columns first (\cref{sec:stratified}), and aggregated
+columns where symmetry would otherwise force exponentially many
+(\cref{sec:abstract-cores})---all at the outer-loop level, with CDCL
+internals untouched, and with the terminal integral probe of
+\cref{alg:ihs} preserved so that correctness never depends on the
+heuristic pricing.

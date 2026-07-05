@@ -9,7 +9,11 @@
 %----------------------------------------------------------------------
 
 This section summarizes the method and findings of~\citet{petrova2025empirical},
-who carry out an empirical study of IHS for the Weighted CSP framework. Where
+who carry out an empirical study of IHS for the Weighted CSP framework. The
+choice of setting is deliberate: we are not aware of a study on \emph{MaxSAT}
+benchmarks that varies the IHS design axes this systematically (cf.\
+\cref{sec:future}), and since WCSP strictly generalizes weighted MaxSAT, the
+findings read back to the setting of \cref{sec:part1,sec:part2}. Where
 the preceding sections frame IHS theoretically as Dantzig--Wolfe on the dual
 packing LP, Petrova et~al.\ vary the two main algorithmic axes (computation of
 hitting vectors and core improvement) and report on 32 configurations across a
@@ -325,7 +329,12 @@ strengthen the cuts/columns produced per oracle call.
 preprocessing.} Tree-decomposition-based merging compresses the
 constraint structure before the IHS loop runs, in the spirit of the OR
 preprocessing techniques (e.g.\ aggregation in column generation) that
-shrink the master dimension before solving.
+shrink the master dimension before solving. With
+\cref{sec:abstract-cores} in view the parallel sharpens: merging and
+abstract cores are the preprocessing-time and search-time faces of the
+same CG remedy---merging aggregates cost functions before the loop runs,
+whereas abstract cores aggregate the symmetric rows/columns that the loop
+would otherwise generate one by one.
 \end{itemize}
 
 Two features of the paper depart from the framing of the preceding sections.
@@ -333,7 +342,10 @@ First, the paper does not consider an \emph{LP-relaxation} view of the
 hitting-vector subproblem, hence none of its variants exploit fractional dual
 prices $\bar{y}$; the price-aware extraction and Wentges stabilization
 techniques of \cref{sec:part1} are therefore complementary rather than
-overlapping. Second, the paper does \emph{not} consider warm-starting from a
+overlapping---and the price-guided separation schedule of
+\cref{sec:price-guided}, which needs only an LP relaxation of the
+hitting-vector IP and the assumption-based oracle already in place, is the
+natural first candidate to port. Second, the paper does \emph{not} consider warm-starting from a
 complementary algorithm (e.g.\ Toulbar2's incremental lower bound, or a short
 core-guided phase); cross-family warm-starting (\cref{sec:techniques}) is an
 unexplored direction.

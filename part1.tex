@@ -638,7 +638,10 @@ over from Dantzig--Wolfe and Benders to the MaxSAT setting. The useful
 consequence is that techniques whose correctness depends only on row--column
 duality and the soundness of the pricing oracle should transfer essentially
 unchanged. This section collects the most actionable candidates, in roughly
-increasing order of implementation cost.
+increasing order of implementation cost. A second installment---pricing-side
+techniques that approximate the reduced-cost optimization itself---requires
+the sharper equivalence analysis of \cref{sec:part2} and is deferred to
+\cref{sec:cg-gap}.
 
 \subsubsection{Cross-Family Warm-Starting}
 
@@ -824,7 +827,8 @@ to test these predictions \emph{as such} on MaxSAT benchmarks.
 \paragraph{The weighted case.} The cleanest LP encodings of core-guided
 algorithms~\citep{katsirelos2023analysis} are for unweighted instances. The
 weighted case is where most practical interest lies, and where the
-bound-tightening story is more delicate: weight-stratified core extraction,
+bound-tightening story is more delicate: weight-stratified core extraction
+(given a partial-pricing reading in \cref{sec:stratified}),
 weight splitting, and the interaction with $\delta$ in
 \cref{alg:cg} change the structure of the implicit master in ways
 that the unweighted analysis does not directly cover. Establishing whether the

@@ -49,6 +49,13 @@ techniques of \cref{sec:techniques} for the empirical setting of
 cross-family warm-starting behaves as predicted on the toy instances of
 \cref{tab:results}, more sophisticated interleaving---e.g., dynamic switching between core-guided
 and IHS phases based on progress metrics, or leveraging initial disjoint cores to heavily prune incomplete solvers like linear search \citep{berg2020core}---remains underexplored.
+(iv) Implementing the pricing-side program of \cref{sec:cg-gap} in the
+prototype: the threshold sweep (\cref{sec:price-guided}) and stratified
+partial pricing (\cref{sec:stratified}) are outer-loop changes to
+\texttt{src/ihs.py}, while abstract cores (\cref{sec:abstract-cores}) would
+test, on the benchmark families of
+\cref{fig:benchmarks,fig:additional_benchmarks}, how much of the LP--IP gap
+of \cref{prop:nonequiv} rank-$k$ rows recover in practice.
 \end{description}
 
 \paragraph{Empirical illustration.} \Cref{tab:results} reports a small
