@@ -705,3 +705,124 @@ columns where symmetry would otherwise force exponentially many
 internals untouched, and with the terminal integral probe of
 \cref{alg:ihs} preserved so that correctness never depends on the
 heuristic pricing.
+
+\subsubsection{An Empirical Check: How Much of the Gap Do Rank-\texorpdfstring{$k$}{k} Rows Recover?}
+\label{sec:gap-empirical}
+
+The threshold sweep (\cref{sec:price-guided}) and abstract cores
+(\cref{sec:abstract-cores}) are implemented in the prototype
+\texttt{IHSSolver} (\texttt{src/ihs.py}, options \texttt{threshold\_sweep}
+and \texttt{auto\_abstraction}/\texttt{abstraction\_sets}); the experiment
+below is reproduced by \texttt{src/gap\_benchmarks.py}. The question it
+answers is the one \cref{prop:nonequiv} leaves open: on instances with a
+positive integrality gap, how much of the distance $z^\star -
+z^\star_{\mathrm{LP}}$ do the abstract-core rows recover in the \emph{LP
+relaxation} of the master---i.e., without invoking the integer master?
+
+\paragraph{An implementation subtlety: mixed cores are disjunctions.}
+One point surfaced by the implementation deserves record, because it is
+invisible in the single-set reading of \eqref{eq:abstract-row}. When the
+abstract probe enforces per-set falsification \emph{counts} $t_A$ and the
+oracle's core mixes counting literals of several abstraction sets, the
+information returned is a \emph{disjunction}---some set $A$ in the core
+must exceed its count $t_A$---not a linear row; the naive sum
+$\sum_{A} \sum_{i \in A} y_i \ge 1 + \sum_A t_A$ is unsound. The exact
+treatment adds an indicator per disjunct to the IP master
+($\sum_{i\in A} y_i \ge (t_A{+}1)\,z_A$ with $\sum_A z_A \ge 1$), whose LP
+projection is the normalized surrogate
+$\sum_A \tfrac{1}{t_A+1} \sum_{i \in A} y_i \ge 1$. Only a
+\emph{single-set} core yields the pure rank-$k$ row
+\eqref{eq:abstract-row}. This is the LP-level face of the aggregation
+trade-off: rows are strong exactly when the oracle's cores respect the
+abstraction sets.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{gap_plot.png}
+\caption{Gap recovery on odd cycles $C_n$ (unit weights; $z^\star_{\mathrm{LP}} = n/2$,
+$z^\star = (n{+}1)/2$). Left: LP relaxation value of the terminal master.
+Right: share of the integrality gap recovered. One aligned abstraction set
+covering the cycle recovers the \emph{entire} gap at every size; the split
+two-arc clustering produces only mixed (disjunctive) cores and recovers
+nothing; the threshold sweep coincides with the baseline because uniform
+prices $\bar y_i = \tfrac12$ collapse the sweep to the standard probe.}
+\label{fig:gap_recovery}
+\end{figure}
+
+\paragraph{Odd cycles: full recovery under aligned aggregation.}
+\Cref{fig:gap_recovery} generalizes the $K_3$ counterexample to odd cycles
+$C_n$, the canonical family with a persistent vertex-cover gap of
+$\tfrac12$. With a single abstraction set covering the cycle, the terminal
+LP master attains $z^\star$ at every size---the odd-cycle inequality of
+\cref{sec:abstract-cores}, discovered automatically as a rank-$k$
+row---while the outer loop shortens from $n{+}1$ iterations (the baseline
+must enumerate all $n$ edge cores) to $(n{+}3)/2$. Splitting the same
+clauses into two contiguous arcs destroys both effects: every core now
+straddles the two sets, only weak normalized surrogates enter the LP, and
+the terminal LP value drops \emph{below} $z^\star_{\mathrm{LP}}$ (the run
+terminates before accumulating the edge rows the baseline collects).
+
+\paragraph{The aggregation limit is core-guided search.} With one
+uniform-weight set covering all soft clauses, the abstract probe asks
+``is there a solution falsifying at most $t$ clauses?'' and increments
+$t$ on each UNSAT answer---that is, IHS at full aggregation \emph{is} a
+core-guided-style linear search over a single cardinality bound (cf.\ the
+MSU family of \cref{sec:part1}). The aggregation axis thus interpolates
+between the two algorithm families of the duality square
+(\cref{sec:unified}): no aggregation is pure IHS, full aggregation is
+linear-search core-guided, and the useful regime of abstract cores lies
+strictly between.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Aggregation alignment on random vertex cover $G(n, 0.2)$
+(means over three seeds; CBC/MiniSat prototype). Unit weights give
+one aligned global abstraction set; weights drawn from $\{1,2,3\}$ give
+three weight-class clusters that cut across the conflict structure.
+``Gap rec.''\ is the share of $z^\star - z^\star_{\mathrm{LP}}$ recovered
+by the terminal LP master (negative when the terminal master is weaker
+than the full ordinary-row LP).}
+\label{tab:alignment}
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Family} & \textbf{Config.} & \textbf{Gap rec.} & \textbf{Iter.} & \textbf{SAT} & \textbf{Time} \\
+\midrule
+unit, $n{=}25$     & Baseline  & $-7\%$   & $43.0$  & $43.0$  & $1.3$s \\
+                   & + Sweep   & $0\%$    & $41.0$  & $89.0$  & $1.3$s \\
+                   & + Abstract& $100\%$  & $15.3$  & $15.3$  & $0.4$s \\
+\midrule
+unit, $n{=}35$     & Baseline  & $0\%$    & $102.0$ & $102.0$ & $3.8$s \\
+                   & + Sweep   & $0\%$    & $92.7$  & $202.3$ & $3.5$s \\
+                   & + Abstract& $100\%$  & $23.7$  & $23.7$  & $0.7$s \\
+\midrule
+weighted, $n{=}25$ & Baseline  & $-56\%$  & $43.3$  & $43.3$  & $1.3$s \\
+                   & + Sweep   & $-33\%$  & $38.3$  & $81.7$  & $1.2$s \\
+                   & + Abstract& $-198\%$ & $40.0$  & $71.7$  & $8.0$s \\
+\midrule
+weighted, $n{=}35$ & Baseline  & $-2\%$   & $87.7$  & $87.7$  & $3.4$s \\
+                   & + Sweep   & $-2\%$   & $82.7$  & $193.3$ & $3.2$s \\
+                   & + Abstract& $-1\%$   & $99.0$  & $185.0$ & $36.9$s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Random vertex cover: alignment decides the sign of the effect.}
+\Cref{tab:alignment} repeats the comparison on random $G(n, 0.2)$ vertex
+cover, where the gap arises from many overlapping odd structures rather
+than one cycle. Under aligned aggregation (unit weights, one global set)
+abstract cores again recover $100\%$ of the gap while cutting iterations
+by $3$--$4\times$ and wall time by $5\times$. Under misaligned aggregation
+(three weight-class clusters) the effect \emph{reverses}: nearly all cores
+are mixed, the LP master gains nothing, SAT calls double, and the
+indicator-laden IP master becomes markedly heavier. All configurations
+return $z^\star$ in all runs---correctness never depends on the
+aggregation---but the profitable regime is exactly the aligned one. This
+is the measured face of the crux noted in \cref{sec:abstract-cores}
+(``choosing what to aggregate'') and sharpens the motivation for the
+dual-informed clustering proposed there: clusters should follow the
+conflict structure the master actually prices, not the weight profile
+alone. The threshold sweep, for its part, behaves as billed: inert under
+uniform prices (odd cycles), and a cheap bound-improvement phase under
+heterogeneous prices ($6$--$12\%$ fewer iterations at roughly twice the
+SAT calls, time-neutral at prototype scale).

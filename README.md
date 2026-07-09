@@ -15,6 +15,8 @@ The solver (`src/ihs.py`) implements several "Transferable Techniques" from OR t
 - **Pareto-Optimal Core Selection:** Biasing the SAT solver toward cores that maximize violation.
 - **Stabilization:** Wentges-style box penalties and in-out separation to damp dual oscillation.
 - **Warm-Starting:** Initializing the hitting set master with cores harvested from a Fu-Malik-style core-guided solver.
+- **Threshold Sweep:** Price-guided separation against the fractional master prices (binary search over price levels).
+- **Abstract Cores:** Column aggregation via counting literals over equal-weight clusters, yielding rank-k master rows that can close part of the LP-IP integrality gap.
 
 ## Usage
 
@@ -36,6 +38,12 @@ Run the parameterized benchmarks:
 
 ```bash
 python3 src/benchmarks.py
+```
+
+Run the integrality-gap recovery experiment (odd cycles + random vertex cover):
+
+```bash
+python3 src/gap_benchmarks.py
 ```
 
 ## Documentation

@@ -49,13 +49,17 @@ techniques of \cref{sec:techniques} for the empirical setting of
 cross-family warm-starting behaves as predicted on the toy instances of
 \cref{tab:results}, more sophisticated interleaving---e.g., dynamic switching between core-guided
 and IHS phases based on progress metrics, or leveraging initial disjoint cores to heavily prune incomplete solvers like linear search \citep{berg2020core}---remains underexplored.
-(iv) Implementing the pricing-side program of \cref{sec:cg-gap} in the
-prototype: the threshold sweep (\cref{sec:price-guided}) and stratified
-partial pricing (\cref{sec:stratified}) are outer-loop changes to
-\texttt{src/ihs.py}, while abstract cores (\cref{sec:abstract-cores}) would
-test, on the benchmark families of
-\cref{fig:benchmarks,fig:additional_benchmarks}, how much of the LP--IP gap
-of \cref{prop:nonequiv} rank-$k$ rows recover in practice.
+(iv) Extending the pricing-side program of \cref{sec:cg-gap}: the
+threshold sweep (\cref{sec:price-guided}) and abstract cores
+(\cref{sec:abstract-cores}) are now implemented in the prototype, and the
+gap-recovery study of \cref{sec:gap-empirical} shows that aligned
+aggregation recovers the full LP--IP gap of \cref{prop:nonequiv} on
+odd-cycle and unit vertex-cover families while misaligned weight-class
+clustering reverses the benefit. Stratified partial pricing
+(\cref{sec:stratified}) remains unimplemented, and the dual-informed
+clustering suggested by \cref{tab:alignment}---aggregating by the
+master's price trajectories rather than by weight alone---is the natural
+next experiment.
 \end{description}
 
 \paragraph{Empirical illustration.} \Cref{tab:results} reports a small
@@ -174,8 +178,15 @@ highlight an important boundary condition: pushing the clause-to-variable ratio 
 places the instances firmly in the unsatisfiable, exponentially difficult regime. Here, 
 unlike Set Cover, the baseline solver rapidly hits an exponential wall, while the 
 warm-started and multi-core configurations manage to stave off the explosion slightly 
-longer. This confirms that while the core-extraction framework transfers universally, 
+longer. This confirms that while the core-extraction framework transfers universally,
 its relative advantage depends heavily on the constraint geometry of the problem.
+
+The same qualitative picture extends to three structured scheduling
+families (\cref{fig:scheduling_1,fig:scheduling_2,fig:scheduling_3}):
+task--machine allocation (generalized assignment), airport gate allocation
+with conflicts, and employee shift scheduling. In all three, Multi-core
+extraction again dominates the other techniques, converging in a fraction
+of the baseline's iterations across every problem size tested.
 
 \begin{figure}[htbp]
 \centering
