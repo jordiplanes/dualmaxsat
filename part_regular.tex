@@ -1,0 +1,311 @@
+%======================================================================
+\section{Applying IHS to Multivalued Regular MaxSAT}
+\label{sec:regular}
+%======================================================================
+
+%----------------------------------------------------------------------
+\subsection{Where Regular MaxSAT Sits}
+\label{sec:regular-place}
+%----------------------------------------------------------------------
+
+The preceding sections bracket a spectrum. \cref{sec:part1,sec:part2} treat
+\emph{Boolean} MaxSAT, where each soft clause is either satisfied or
+falsified, the falsification indicators $y_i$ are binary, and IHS solves a
+minimum-cost hitting-set IP whose dual is the core-packing LP~\eqref{eq:pack}.
+\cref{sec:part3} treats the other end, general Weighted CSP, where variables
+range over finite domains, soft objects are multi-valued cost functions, and
+the master becomes a minimum-cost \emph{hitting-vector} (MHV) problem over cost
+vectors (\cref{sec:vecihs}). This section fills in the natural midpoint:
+\emph{multivalued Regular MaxSAT}, in which variables are multi-valued but the
+soft objects retain \emph{order} (regular) structure.
+
+The question worth asking is not merely ``can IHS be run here''---it can, and
+\cref{sec:regular-enc} says how in one paragraph---but \emph{what the master
+becomes}. The answer organizes the whole section: the Benders/Dantzig--Wolfe
+hitting-set machinery of \cref{sec:part1,sec:part2} survives multivaluedness
+essentially intact. The regular master is the ordinary hitting-set IP of
+\cref{alg:ihs} augmented by one \emph{ladder} of order inequalities per
+variable; those ladders form a totally unimodular block, so they are
+gap-neutral (\cref{prop:gapneutral}). The general MHV master of \cref{sec:part3}
+is what remains once the cost functions \emph{lose} the order structure and the
+ladder collapse no longer applies. Regular MaxSAT is thus the setting in which
+multivaluedness is added to Boolean MaxSAT \emph{without} leaving the
+duality square of \cref{sec:unified}.
+
+%----------------------------------------------------------------------
+\subsection{Multivalued Regular MaxSAT}
+\label{sec:regular-def}
+%----------------------------------------------------------------------
+
+Fix variables $x_1,\dots,x_n$, each ranging over a finite totally ordered
+domain; without loss of generality $x_j \in D_j = \{0,1,\dots,d_j-1\}$. A
+\emph{regular literal} is a threshold constraint on a single variable, either
+an up-literal $(x_j \ge a)$ or a down-literal $(x_j \le a)$ for some
+$a \in D_j$; an assignment $I : x_j \mapsto D_j$ satisfies $(x_j \ge a)$ iff
+$I(x_j) \ge a$, and dually for $(x_j \le a)$. A \emph{regular clause} is a
+disjunction of regular literals, and a \emph{regular CNF formula} is a
+conjunction of regular clauses. These are the ``regular'' signed CNF formulas
+of many-valued logic, the fragment of signed CNF in which every sign is an
+up-set or a down-set of the truth-value order~\citep{beckert2000signed}.
+
+A \emph{weighted partial regular MaxSAT} instance $\langle \mathcal{H},
+\mathcal{S}, w\rangle$ has hard regular clauses~$\mathcal{H}$, soft regular
+clauses $\mathcal{S} = \{s_1,\dots,s_m\}$, and weights
+$w : \mathcal{S} \to \mathbb{Q}_{>0}$; the goal is an assignment satisfying all
+of $\mathcal{H}$ that minimizes the total weight of falsified soft clauses.
+Setting every $d_j = 2$ recovers Boolean MaxSAT exactly. Regular MaxSAT is the
+signed-logic face of WCSP: the translation of~\citet{ansotegui2007logic} maps a
+WCSP with order-structured (in particular convex) cost functions onto exactly
+this fragment, so the setting is neither exotic nor a toy---it is the standard
+bridge between the two frameworks the memo studies.
+
+%----------------------------------------------------------------------
+\subsection{The Order Encoding and the Shallow Transfer}
+\label{sec:regular-enc}
+%----------------------------------------------------------------------
+
+The quickest way to run IHS on a regular instance is to Booleanize it with the
+\emph{order} (a.k.a.\ regular, ladder) encoding of finite-domain
+variables~\citep{ansotegui2004mapping}. For each variable $x_j$ introduce
+Boolean ladder variables $X_j^a$ for $a = 1,\dots,d_j-1$ with intended meaning
+$X_j^a \equiv (x_j \ge a)$, fix $X_j^0 = \top$ and $X_j^{d_j} = \bot$, and add
+the \emph{monotonicity axioms}
+\begin{equation}
+X_j^{a+1} \to X_j^{a}, \qquad\text{i.e.}\qquad (\neg X_j^{a+1} \vee X_j^{a}),
+\qquad a = 1,\dots,d_j-2,
+\label{eq:ladder}
+\end{equation}
+as \emph{hard} clauses. Under~\eqref{eq:ladder} every Boolean model corresponds
+to a unique domain value $I(x_j) = \max\{a : X_j^a = 1\}$, and every regular
+literal becomes an ordinary Boolean literal: $(x_j \ge a) \mapsto X_j^a$ and
+$(x_j \le a) \mapsto \neg X_j^{a+1}$. A regular clause therefore Booleanizes to
+an ordinary clause over the ladder variables.
+
+The consequence is that \emph{the entire apparatus of \cref{sec:part1,sec:part2}
+transfers verbatim}. Cores are subsets of soft (regular) clauses unsatisfiable
+together with $\mathcal{H}$ and the monotonicity axioms; the master is the
+hitting-set IP~\eqref{eq:hit}; the SAT oracle is a call on the order-encoded
+formula, or a native regular / many-valued SAT solver~\citep{bejar2007regular},
+or any finite-domain CP/SMT backend. The Benders reading (core-guided,
+\cref{sec:benders}) and the Dantzig--Wolfe reading (IHS, \cref{sec:dw}) apply
+unchanged, because the only thing that changed is \emph{how the subproblem
+decides satisfiability}, not the structure of the master or the cut. This is the
+honest one-line answer to ``how do I apply IHS to regular MaxSAT.'' The rest of
+the section is about what is \emph{gained} by not throwing the order structure
+away at the encoding step.
+
+%----------------------------------------------------------------------
+\subsection{Multivalued Costs as Soft Regular Literals}
+\label{sec:regular-costs}
+%----------------------------------------------------------------------
+
+The order structure earns its keep as soon as costs are multi-valued. A unary
+cost function $f_j : D_j \to \mathbb{Q}_{\ge 0}$ that is non-decreasing (the
+common WCSP case: deviation penalties, tardiness, resource overuse) is
+represented by soft regular \emph{down}-literals with telescoped weights. For
+each threshold $a = 1,\dots,d_j-1$ introduce
+\begin{equation}
+\ell_j^{a} \;:=\; (x_j \le a-1) \;\equiv\; (x_j < a),
+\qquad w(\ell_j^{a}) \;=\; \Delta_j^{a} \;:=\; f_j(a) - f_j(a-1) \;\ge\; 0.
+\label{eq:staircase}
+\end{equation}
+Write $y_j^{a} := \mathbf 1[\ell_j^{a}\text{ falsified}] = \mathbf 1[x_j \ge a]$.
+If the assignment sets $x_j = v$, the falsified literals are exactly
+$\{\ell_j^{a} : a \le v\}$, of total weight
+$\sum_{a=1}^{v}\Delta_j^{a} = f_j(v) - f_j(0)$. So, up to the additive constant
+$\sum_j f_j(0)$, the falsification cost equals $\sum_j f_j(x_j)$: the staircase
+telescopes. (A non-monotone $f_j$ is handled by splitting it into monotone
+pieces, or with up-literals as well; the clean single-direction staircase is
+the convex case.)
+
+Two facts make this more than a re-encoding. First, because the falsified
+literals of a variable are a \emph{prefix} of its threshold chain, the
+indicators are monotone: $y_j^{a} \ge y_j^{a+1}$. These are exactly the
+primal-side image of the monotonicity axioms~\eqref{eq:ladder}, now expressed on
+the \emph{master} variables. Second, a core acquires a \emph{threshold}
+structure. A core is a set of down-literal assumptions
+$\{x_j \le a_j-1 : j \in J\}$ that is unsatisfiable with $\mathcal{H}$; it
+certifies $\mathcal{H} \models \bigvee_{j \in J}(x_j \ge a_j)$, a genuine
+regular clause, whose linearization is the single-indicator-per-variable
+hitting-set row $\sum_{j\in J} y_j^{a_j} \ge 1$. This is precisely the cost-vector
+core of \cref{sec:vecihs} specialized to unary regular costs: the induced CSP
+$F_{\vec v}$ there is here a conjunction of hard upper-bound literals
+$\{x_j \le a_j-1\}$, and its unsatisfiability is a regular clause.
+
+Collecting the objective~\eqref{eq:staircase}, the covering rows, and the ladder
+rows gives the \textbf{regular hitting-set master}
+\begin{align}
+\min \;\; & \sum_{j} \sum_{a=1}^{d_j-1} \Delta_j^{a}\, y_j^{a}
+   \label{eq:reg-master-obj}\\
+\text{s.t.}\;\; & \sum_{j \in J_t} y_j^{a_j^{t}} \ge 1
+   && \forall\text{ cores } t, \label{eq:reg-master-cover}\\
+& y_j^{a} \ge y_j^{a+1}
+   && \forall j,\ a = 1,\dots,d_j-2, \label{eq:reg-master-ladder}\\
+& y_j^{a} \in \{0,1\}. \notag
+\end{align}
+Solving~\eqref{eq:reg-master-ladder} together with the objective, choosing the
+top indicator $y_j^{a_j}=1$ forces $y_j^{a}=1$ for all $a \le a_j$ and hence
+pays $\sum_{a\le a_j}\Delta_j^{a} = f_j(a_j)-f_j(0)$: the true cost of lifting
+$x_j$ to $a_j$. The master is still a $0/1$ program over soft-clause
+indicators---\emph{not} the general MHV program of \cref{sec:vecihs}---with the
+multivaluedness absorbed into (i) which threshold indicator a core selects and
+(ii) the ladder rows that make the objective charge the whole prefix.
+
+\paragraph{A small worked instance.} Take $x_1, x_2 \in \{0,1,2\}$ with
+$f_1(v)=f_2(v)=v$, so each variable contributes soft literals
+$\ell_j^{1}=(x_j<1)$ and $\ell_j^{2}=(x_j<2)$ of weight $1$, plus the ladder row
+$y_j^{1} \ge y_j^{2}$. Let the single hard clause be the regular clause
+$\mathcal{H} = \{(x_1 \ge 2)\vee(x_2 \ge 2)\}$ (``some variable must reach its
+top''). The oracle on $\mathcal{H}\cup\{x_1\le1,\ x_2\le1\}$ is UNSAT and returns
+the core $\{\ell_1^{2},\ell_2^{2}\}$, cut $y_1^{2}+y_2^{2}\ge1$. The
+master~\eqref{eq:reg-master-obj}--\eqref{eq:reg-master-ladder} then sets, e.g.,
+$y_1^{2}=1$, forcing $y_1^{1}=1$ by the ladder, for cost $2 = z^\star$ (lift
+$x_1$ to $2$); the next oracle call on $\mathcal{H}\cup\{x_2\le1\}$ succeeds
+($x_1=2, x_2=0$). Note that here $z^\star = z^\star_{\mathrm{LP}} = 2$: the
+multivaluedness alone creates no gap. To reproduce a $K_3$-style gap
+(\cref{sec:counter}) one needs an odd cycle \emph{among variables}, not within a
+single variable's ladder---which is exactly the content of the next subsection.
+
+%----------------------------------------------------------------------
+\subsection{What Multivaluedness Costs the Master: Gap-Neutrality}
+\label{sec:regular-gap}
+%----------------------------------------------------------------------
+
+The pressing question for the equivalence analysis of \cref{sec:part2} is
+whether multivaluedness enlarges the integrality gap of the hitting-set
+polytope---the exact quantity that separates pure Dantzig--Wolfe (IHS-LP) from
+practical IHS-IP (\cref{prop:nonequiv}). It does not.
+
+\begin{proposition}[Ladder rows are gap-neutral]
+\label[proposition]{prop:gapneutral}
+In the regular master~\eqref{eq:reg-master-obj}--\eqref{eq:reg-master-ladder},
+the ladder constraints~\eqref{eq:reg-master-ladder} form a totally unimodular
+block, and they are valid for every integer-feasible point. Consequently,
+adding them to the LP relaxation of the master weakly \emph{lowers} the
+integrality gap and never raises it: the LP value weakly increases toward
+$z^\star$ while the IP value is unchanged. In particular, any positive gap of
+the regular master is inherited entirely from the covering
+rows~\eqref{eq:reg-master-cover}, i.e.\ from conflict structure \emph{among
+variables}, exactly as in the Boolean case.
+\end{proposition}
+
+\begin{proof}
+Each row of~\eqref{eq:reg-master-ladder} is $y_j^{a} - y_j^{a+1} \ge 0$, with a
+single $+1$ and a single $-1$; per variable these form an interval (difference)
+matrix, and across variables the block is block-diagonal, hence totally
+unimodular. Validity is immediate: any assignment sets a prefix of each ladder
+to $1$, so $y_j^{a}\ge y_j^{a+1}$ holds at every integer point, and the IP
+optimum is unchanged. Since the rows are valid, they cut off only fractional
+points; adjoining them shrinks the LP-feasible region, so the minimization LP
+value weakly increases. With $z^\star$ fixed, $z^\star - z^\star_{\mathrm{LP}}$
+weakly decreases. The residual gap is then a property of the covering block
+alone, which is the Boolean hitting-set matrix of~\eqref{eq:hit}.
+\end{proof}
+
+Two readings follow. Negatively, multivaluedness is ``free'' for the
+duality story: the exact-equivalence proposition \cref{prop:equiv} (IHS-LP $=$
+DW) and the non-equivalence proposition \cref{prop:nonequiv} (integer master
+strictly stronger) both carry over to regular MaxSAT unchanged, with the ladder
+rows as gap-neutral valid inequalities and the $K_3$ triangle of
+\cref{sec:counter} still the minimal witness of a gap. Positively, the ladder
+rows can only \emph{help}: on instances where the order structure interacts with
+the conflict structure they may close part of the gap for free---the same
+phenomenon by which abstract cores strengthen the LP master in
+\cref{sec:abstract-cores}, obtained here from the encoding rather than from an
+added cardinality constraint.
+
+\begin{remark}[Regular literals are ordered counting literals]
+\label[remark]{rem:regular-abstract}
+There is a precise kinship between the threshold indicators $y_j^{a}$ and the
+counting literals of abstract cores (\cref{sec:abstract-cores}). An abstract
+core introduces a literal asserting ``at least $k$ clauses of $A$ are
+falsified,'' inducing the rank-$k$ master row $\sum_{s_i \in A} y_i \ge k$ of
+\eqref{eq:abstract-row} over an \emph{unordered, interchangeable} set $A$. A
+regular variable ships with exactly such counting literals already---$(x_j \ge
+a)$ is ``at least $a$ of the ladder is falsified''---but its clauses are
+\emph{totally ordered}, and the ladder rows~\eqref{eq:reg-master-ladder} are what
+encode that order (a nested prefix) rather than a symmetric count. Abstract
+cores, viewed through this lens, \emph{re-introduce} on flat Boolean softs the
+threshold structure that regular MaxSAT carries natively; conversely,
+aggregating a regular variable's ladder into a single abstract core is
+degenerate, since its thresholds already are the counts. The aggregation lever
+of \cref{sec:abstract-cores} and the encoding of \cref{sec:regular-costs} are
+two routes to the same rank-$k$ rows.
+\end{remark}
+
+%----------------------------------------------------------------------
+\subsection{The Oracle and Core Improvement}
+\label{sec:regular-oracle}
+%----------------------------------------------------------------------
+
+Pricing---the SAT oracle in the Dantzig--Wolfe reading of \cref{sec:dw}---has a
+convenient form here. The candidate correction supplied by the master is a
+vector of thresholds, one per variable: $H^\star$ is read off as ``leave $x_j$
+free up to the largest $a$ with $y_j^{a}=0$.'' The oracle then decides
+$\mathcal{H} \cup \{x_j \le a_j-1\}_j$, which an assumption-based solver
+implements by asserting the ladder literals $\neg X_j^{a_j}$; an UNSAT answer
+returns a core as a threshold vector, and the incrementality that makes ``lazy
+cores'' free in \cref{sec:part3} works identically. Multi-core and disjoint-core
+extraction (the transferred technique that dominated the ablations of
+\cref{sec:part3}, \cref{fig:benchmarks}) carry over without change.
+
+Core improvement (\textsc{ImprCore}, \cref{alg:ihs-lb}) also specializes
+cleanly. A \emph{maximal} regular core is obtained by pushing each threshold
+$a_j$ as high as the core condition permits---raising the enforced upper bound
+$x_j \le a_j-1$ until satisfiability is regained---which is exactly the
+component-wise increment of \cref{sec:alts} restricted to the ordered domain.
+The ``prefer the lowest current value'' rule of \cref{sec:part3} becomes
+``prefer to raise the variable whose threshold sits lowest on its ladder,''
+making cores costlier to hit and so accelerating the lower bound. In short, the
+Axis-2 design space of \citet{petrova2025empirical} instantiates on regular
+instances with thresholds playing the role of cost-vector components, and the
+Axis-1 hitting-vector relaxations (cost-bounded, greedy) apply to the regular
+master~\eqref{eq:reg-master-obj}--\eqref{eq:reg-master-ladder} as written.
+
+%----------------------------------------------------------------------
+\subsection{The Spectrum: Boolean \texorpdfstring{$\subseteq$}{<=} Regular \texorpdfstring{$\subseteq$}{<=} WCSP}
+\label{sec:regular-spectrum}
+%----------------------------------------------------------------------
+
+\cref{tab:spectrum} places the three settings on one axis. Reading down the
+``Master'' column tells the whole story: the hitting-set IP of Boolean MaxSAT
+gains, in the regular case, one totally unimodular ladder per variable (a
+gap-neutral addition, \cref{prop:gapneutral}), and gains, in the WCSP case, the
+full multi-valued hitting-vector program once the cost functions are no longer
+order-structured and the ladder collapse of \cref{sec:regular-costs} no longer
+applies.
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\caption{Multivalued Regular MaxSAT as the structured midpoint between the
+Boolean MaxSAT of \cref{sec:part1,sec:part2} and the general WCSP of
+\cref{sec:part3}. The Dantzig--Wolfe / Benders duality of the memo survives
+into the regular row intact; the WCSP row is what remains once the order
+structure is dropped.}
+\label{tab:spectrum}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Setting} & \textbf{Variables} & \textbf{Soft object} & \textbf{Master} \\
+\midrule
+Boolean MaxSAT & binary & clause, indicator $y_i$ & hitting-set IP~\eqref{eq:hit} \\
+Regular MaxSAT & multivalued, ordered & threshold literal $y_j^{a}$ & hitting-set IP $+$ ladders~\eqref{eq:reg-master-ladder} \\
+WCSP & multivalued & cost function, value $v_i$ & min-cost hitting vector (MHV) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This diagram also explains, in the memo's own terms, the empirical suitability
+proxy that \cref{sec:part3} distilled from \citet{petrova2025empirical}: IHS
+does best on WCSP instances with \emph{small domains and few distinct costs}.
+Those are precisely the instances whose order encoding stays compact---few
+ladder rungs per variable, hence a regular master~\eqref{eq:reg-master-obj}--%
+\eqref{eq:reg-master-ladder} that departs only mildly from the Boolean
+hitting-set IP on which the Dantzig--Wolfe analysis is tightest. Large domains
+with many distinct costs (CELAR, in \cref{tab:wcspclasses}) push the instance
+away from the regular midpoint and toward the full MHV master, where the clean
+row--column duality of \cref{sec:dw} is diluted. The regular view thus does more
+than add a setting: it locates \emph{why} the hitting-set approach tracks the
+domain and cost granularity, which the Boolean and WCSP endpoints, taken alone,
+leave unexplained.

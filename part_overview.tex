@@ -3,11 +3,12 @@
 \label{sec:overview}
 %======================================================================
 
-This memo collects four short technical notes. Each can be read
+This memo collects five short technical notes. Each can be read
 independently, but they were drafted to be read in sequence: the first
 frames IHS structurally, the second tests how far the framing carries, the
-third broadens the mapping to other OR paradigms, and the fourth connects
-it to empirical practice.
+third broadens the mapping to other OR paradigms, the fourth connects
+it to empirical practice, and the fifth extends the machinery from Boolean
+to multivalued variables.
 
 \begin{itemize}
 \item \textbf{\Cref{sec:part1} (Decomposition View):} develops the decomposition view. After reviewing the
@@ -34,6 +35,14 @@ Satisfiable Subsets (MSSes).
 the preceding sections, mapping their two design axes onto the in-out
 separation and Pareto-cut selection techniques predicted by the
 decomposition framing.
+
+\item \textbf{\Cref{sec:regular} (Multivalued Regular MaxSAT):} places
+multivalued Regular MaxSAT as the structured midpoint between the Boolean
+MaxSAT of \cref{sec:part1,sec:part2} and the general WCSP of \cref{sec:part3}.
+It shows that the hitting-set master gains only a gap-neutral block of order
+(``ladder'') constraints per variable, so the Benders/Dantzig--Wolfe duality
+survives multivaluedness intact, and uses this to explain the small-domain /
+few-costs suitability proxy observed empirically in \cref{sec:part3}.
 \end{itemize}
 
 Readers familiar with the core/correction-set duality and with column
